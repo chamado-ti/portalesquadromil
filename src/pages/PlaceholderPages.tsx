@@ -35,52 +35,6 @@ export function PlaceholderPage({ title, description }: PlaceholderPageProps) {
   );
 }
 
-// TI Pages
-export function TIUsuariosPage() {
-  return (
-    <PlaceholderPage
-      title="Gestão de Usuários"
-      description="Gerencie usuários, defina perfis, ative/desative acessos e resete senhas."
-    />
-  );
-}
-
-export function TIChamadosPage() {
-  return (
-    <PlaceholderPage
-      title="Gestão de Chamados"
-      description="Visualize todos os chamados em formato Kanban, gerencie status e prioridades."
-    />
-  );
-}
-
-export function TIAgendamentosPage() {
-  return (
-    <PlaceholderPage
-      title="Agendamentos"
-      description="Visualize e gerencie todos os agendamentos do sistema."
-    />
-  );
-}
-
-export function TILogsPage() {
-  return (
-    <PlaceholderPage
-      title="Logs de Auditoria"
-      description="Acompanhe todas as ações realizadas no sistema."
-    />
-  );
-}
-
-export function TIConfiguracoesPage() {
-  return (
-    <PlaceholderPage
-      title="Configurações"
-      description="Configure categorias de chamados, níveis de urgência e outras opções."
-    />
-  );
-}
-
 // Guarita Pages
 export function GuaritaQRCodePage() {
   return (

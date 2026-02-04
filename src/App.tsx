@@ -14,13 +14,11 @@ import NotFound from "./pages/NotFound";
 
 // TI pages
 import TIDashboard from "./pages/ti/TIDashboard";
-import {
-  TIUsuariosPage,
-  TIChamadosPage,
-  TIAgendamentosPage,
-  TILogsPage,
-  TIConfiguracoesPage,
-} from "./pages/PlaceholderPages";
+import TIUsuariosPage from "./pages/ti/TIUsuariosPage";
+import TIChamadosPage from "./pages/ti/TIChamadosPage";
+import TIAgendamentosPage from "./pages/ti/TIAgendamentosPage";
+import TILogsPage from "./pages/ti/TILogsPage";
+import TIConfiguracoesPage from "./pages/ti/TIConfiguracoesPage";
 
 // Guarita pages
 import GuaritaDashboard from "./pages/guarita/GuaritaDashboard";
