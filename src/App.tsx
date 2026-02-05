@@ -22,18 +22,14 @@ import TIConfiguracoesPage from "./pages/ti/TIConfiguracoesPage";
 
 // Guarita pages
 import GuaritaDashboard from "./pages/guarita/GuaritaDashboard";
-import {
-  GuaritaQRCodePage,
-  GuaritaHistoricoPage,
-} from "./pages/PlaceholderPages";
+import GuaritaQRCodePage from "./pages/guarita/GuaritaQRCodePage";
+import GuaritaHistoricoPage from "./pages/guarita/GuaritaHistoricoPage";
 
 // Colaborador pages
 import ColaboradorDashboard from "./pages/colaborador/ColaboradorDashboard";
-import {
-  ColaboradorAssistentePage,
-  ColaboradorChamadosPage,
-  ColaboradorAgendamentosPage,
-} from "./pages/PlaceholderPages";
+import ColaboradorAssistentePage from "./pages/colaborador/ColaboradorAssistentePage";
+import ColaboradorChamadosPage from "./pages/colaborador/ColaboradorChamadosPage";
+import ColaboradorAgendamentosPage from "./pages/colaborador/ColaboradorAgendamentosPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
