@@ -1,42 +1,63 @@
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { 
+  ShieldCheck, 
+  Monitor, 
+  QrCode, 
+  UserCheck, 
+  Cpu, 
+  ClipboardList, 
+  Lock, 
+  LayoutDashboard, 
+  ArrowRight, 
+  ChevronRight, 
+  Clock, 
+  MessageSquare, 
+  Search, 
+  CheckCircle2,
+  BarChart3
+} from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { LoadingPage } from '@/components/ui/LoadingSpinner';
 import logoEsquadromil from '@/assets/logo-esquadromil.png';
-import {
-  Shield,
-  Users,
-  Ticket,
-  Calendar,
-  Bot,
-  QrCode,
-  BarChart3,
-  Lock,
-  ArrowRight,
-  CheckCircle,
-} from 'lucide-react';
+
+const pros = [
+  { title: "Redução de Chamados Repetitivos", desc: "IA e base de conhecimento resolvem dúvidas comuns antes de virarem tickets.", icon: MessageSquare },
+  { title: "Fluxos de Trabalho Ágeis", desc: "Aprovação e resolução de demandas internas com menos burocracia manual.", icon: Clock },
+  { title: "Dados para Tomada de Decisão", desc: "Relatórios precisos sobre gargalos operacionais e performance setorial.", icon: BarChart3 },
+  { title: "Segurança de Dados Internos", desc: "Protocolos rígidos que protegem informações estratégicas da empresa.", icon: Lock }
+];
 
 export default function Landing() {
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [activeSlide, setActiveSlide] = useState(0);
   const navigate = useNavigate();
-  const { isAuthenticated, isLoading, role } = useAuth();
+  const { role, isAuthenticated, isLoading } = useAuth();
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 20);
+    };
+    window.addEventListener('scroll', handleScroll);
+
+    const interval = setInterval(() => {
+      setActiveSlide((prev) => (prev + 1) % pros.length);
+    }, 4000);
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      clearInterval(interval);
+    };
+  }, []);
 
   useEffect(() => {
     if (!isLoading && isAuthenticated && role) {
-      switch (role) {
-        case 'ti':
-          navigate('/ti');
-          break;
-        case 'guarita':
-          navigate('/guarita');
-          break;
-        case 'colaborador':
-          navigate('/colaborador');
-          break;
-        default:
-          navigate('/colaborador');
-      }
+      const roleRoutes: Record<string, string> = {
+        ti: '/ti',
+        guarita: '/guarita',
+        colaborador: '/colaborador',
+      };
+      navigate(roleRoutes[role] || '/login');
     }
   }, [isAuthenticated, isLoading, role, navigate]);
 
@@ -44,238 +65,375 @@ export default function Landing() {
     return <LoadingPage message="Verificando sessão..." />;
   }
 
-  const features = [
-    {
-      icon: Ticket,
-      title: 'Gestão de Chamados',
-      description: 'Sistema completo de tickets com Kanban, prioridades e histórico detalhado.',
-    },
-    {
-      icon: Bot,
-      title: 'Assistente IA',
-      description: 'Suporte inteligente que auxilia colaboradores e cria chamados automaticamente.',
-    },
-    {
-      icon: Calendar,
-      title: 'Agendamentos',
-      description: 'Controle de visitas com geração de QR Code e registro de entrada/saída.',
-    },
-    {
-      icon: QrCode,
-      title: 'Controle de Acesso',
-      description: 'Validação de visitantes via QR Code com monitoramento em tempo real.',
-    },
-    {
-      icon: Users,
-      title: 'Gestão de Usuários',
-      description: 'Administração centralizada de colaboradores, perfis e permissões.',
-    },
-    {
-      icon: BarChart3,
-      title: 'Dashboard & Relatórios',
-      description: 'Métricas e indicadores para tomada de decisão estratégica.',
-    },
-  ];
+  const handleAccessClick = () => {
+    navigate('/login');
+  };
 
-  const benefits = [
-    'Acesso restrito e seguro por perfil',
-    'Notificações em tempo real',
-    'Histórico completo de ações',
-    'Interface intuitiva e moderna',
-    'Suporte técnico centralizado',
-    'Conformidade com políticas internas',
-  ];
+  const handleScrollTo = (id: string) => {
+    const element = document.getElementById(id);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="fixed top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container mx-auto flex h-16 items-center justify-between px-4">
-          <div className="flex items-center gap-3">
-            <img src={logoEsquadromil} alt="Esquadromil" className="h-10 w-10 object-contain" />
-            <span className="text-xl font-bold text-foreground">Portal Esquadromil</span>
+    <div className="min-h-screen bg-white font-sans text-slate-900 selection:bg-blue-100 selection:text-blue-900">
+      {/* Navegação */}
+      <nav className={`fixed top-0 w-full z-50 transition-all duration-300 ${isScrolled ? 'bg-white shadow-md py-3' : 'bg-transparent py-5'}`}>
+        <div className="max-w-7xl mx-auto px-6 flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <img src={logoEsquadromil} alt="Esquadromil" className="h-8 w-8 object-contain" />
+            <span className={`text-xl font-bold tracking-tight ${isScrolled ? 'text-blue-900' : 'text-white'}`}>
+              ESQUADROMIL
+            </span>
           </div>
-          <Button onClick={() => navigate('/login')} variant="default">
-            Acessar Portal
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
+          <div className="hidden md:flex items-center gap-8">
+            <button onClick={() => handleScrollTo('sistema')} className={`text-sm font-medium hover:opacity-70 transition-opacity ${isScrolled ? 'text-slate-600' : 'text-white/90'}`}>O Sistema</button>
+            <button onClick={() => handleScrollTo('modulos')} className={`text-sm font-medium hover:opacity-70 transition-opacity ${isScrolled ? 'text-slate-600' : 'text-white/90'}`}>Módulos</button>
+            <button onClick={() => handleScrollTo('seguranca')} className={`text-sm font-medium hover:opacity-70 transition-opacity ${isScrolled ? 'text-slate-600' : 'text-white/90'}`}>Segurança</button>
+            <button 
+              onClick={handleAccessClick}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-md text-sm font-semibold transition-colors shadow-lg shadow-blue-900/20"
+            >
+              Acesso Interno
+            </button>
+          </div>
+        </div>
+      </nav>
+
+      {/* Hero Section */}
+      <header className="relative bg-blue-900 min-h-[85vh] flex items-center pt-20 overflow-hidden">
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:40px_40px]"></div>
+        </div>
+        <div className="absolute -bottom-48 -right-48 w-[600px] h-[600px] bg-blue-700 rounded-full blur-[120px] opacity-20"></div>
+        
+        <div className="max-w-7xl mx-auto px-6 relative z-10 w-full">
+          <div className="max-w-3xl">
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-800/50 border border-blue-400/30 rounded-full text-blue-100 text-xs font-semibold tracking-wider uppercase mb-6">
+              <span className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></span>
+              Infraestrutura Crítica
+            </div>
+            <h1 className="text-5xl md:text-7xl font-bold text-white leading-tight mb-6">
+              Portal <span className="text-blue-400">Esquadromil</span>
+            </h1>
+            <p className="text-xl text-blue-100/80 mb-10 leading-relaxed max-w-2xl">
+              Sistema interno corporativo de alta performance. Gestão centralizada para chamados de TI, agendamentos inteligentes e controle rigoroso de acesso e operações.
+            </p>
+            <div className="flex flex-wrap gap-4">
+              <button 
+                onClick={handleAccessClick}
+                className="bg-blue-500 hover:bg-blue-400 text-white px-8 py-4 rounded-lg font-bold text-lg transition-all flex items-center gap-2 group shadow-xl shadow-blue-950/40"
+              >
+                Iniciar Acesso
+                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              </button>
+            </div>
+          </div>
         </div>
       </header>
 
-      {/* Hero Section */}
-      <section className="relative overflow-hidden pt-16">
-        <div className="hero-institutional min-h-[600px] py-24">
-          <div className="container mx-auto px-4">
-            <div className="mx-auto max-w-4xl text-center">
-              <div className="mb-8 flex justify-center">
-                <img
-                  src={logoEsquadromil}
-                  alt="Esquadromil"
-                  className="h-28 w-28 object-contain drop-shadow-2xl"
-                />
+      {/* Carrossel Automático */}
+      <section className="py-16 bg-blue-50">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="bg-white rounded-3xl p-8 md:p-12 shadow-sm border border-slate-100 relative overflow-hidden">
+            <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-12">
+              <div className="w-full md:w-1/2">
+                <h2 className="text-blue-900 font-bold text-sm uppercase tracking-widest mb-4">Vantagens Competitivas</h2>
+                <div className="h-48 flex items-center">
+                  <div key={activeSlide} className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+                    <h3 className="text-3xl font-bold text-slate-900 mb-4">{pros[activeSlide].title}</h3>
+                    <p className="text-lg text-slate-600">{pros[activeSlide].desc}</p>
+                  </div>
+                </div>
+                <div className="flex gap-2 mt-8">
+                  {pros.map((_, idx) => (
+                    <button 
+                      key={idx}
+                      onClick={() => setActiveSlide(idx)}
+                      className={`h-1.5 rounded-full transition-all duration-500 ${activeSlide === idx ? 'w-8 bg-blue-600' : 'w-2 bg-slate-300'}`}
+                    />
+                  ))}
+                </div>
               </div>
-              <h1 className="mb-6 text-4xl font-bold tracking-tight text-primary-foreground md:text-5xl lg:text-6xl">
-                Portal Corporativo
-                <span className="block text-primary-foreground/90">Esquadromil</span>
-              </h1>
-              <p className="mb-8 text-xl text-primary-foreground/80 md:text-2xl">
-                Plataforma integrada de gestão interna para suporte técnico,
-                controle de acesso e comunicação corporativa.
-              </p>
-              <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
-                <Button
-                  size="lg"
-                  variant="secondary"
-                  onClick={() => navigate('/login')}
-                  className="px-8 py-6 text-lg font-semibold shadow-lg transition-all hover:scale-105 hover:shadow-xl"
-                >
-                  Entrar no Portal
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </Button>
-              </div>
-              <div className="mt-12 flex items-center justify-center gap-2 text-primary-foreground/70">
-                <Lock className="h-4 w-4" />
-                <span className="text-sm">Acesso exclusivo para colaboradores autorizados</span>
+              <div className="w-full md:w-1/3 flex justify-center">
+                <div className="relative">
+                  <div className="w-32 h-32 bg-blue-600 rounded-full flex items-center justify-center text-white shadow-2xl animate-pulse">
+                    {React.createElement(pros[activeSlide].icon, { size: 48 })}
+                  </div>
+                  <div className="absolute -top-4 -right-4 bg-green-500 text-white p-2 rounded-full shadow-lg">
+                    <CheckCircle2 size={24} />
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Features Section */}
-      <section className="py-24">
-        <div className="container mx-auto px-4">
-          <div className="mb-16 text-center">
-            <h2 className="mb-4 text-3xl font-bold text-foreground md:text-4xl">
-              Funcionalidades Principais
-            </h2>
-            <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
-              Ferramentas integradas para otimizar processos internos e melhorar a produtividade da equipe.
-            </p>
-          </div>
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {features.map((feature) => (
-              <Card
-                key={feature.title}
-                className="group border-border/50 bg-card transition-all hover:border-primary/30 hover:shadow-lg"
-              >
-                <CardContent className="p-6">
-                  <div className="mb-4 inline-flex rounded-lg bg-primary/10 p-3">
-                    <feature.icon className="h-6 w-6 text-primary" />
+      {/* Intro Section */}
+      <section id="sistema" className="py-24 bg-white">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="grid md:grid-cols-2 gap-16 items-center">
+            <div>
+              <h2 className="text-blue-900 font-bold text-sm uppercase tracking-widest mb-4 flex items-center gap-2">
+                <div className="w-8 h-px bg-blue-600"></div>
+                O Ecossistema Operacional
+              </h2>
+              <h3 className="text-4xl font-bold text-slate-900 mb-6">
+                Controle total, <br />rastreabilidade absoluta.
+              </h3>
+              <p className="text-lg text-slate-600 leading-relaxed mb-8">
+                O Portal Esquadromil não é apenas uma aplicação, é a espinha dorsal de nossas operações diárias. Desenvolvido para unificar processos complexos numa interface intuitiva e altamente segura.
+              </p>
+              
+              <div className="space-y-6">
+                {[
+                  { title: "Acesso Exclusivo", desc: "Sistema fechado, sem registo público. Controle rigoroso de permissões pelo setor de TI.", icon: Lock },
+                  { title: "Gestão Centralizada", desc: "Unificação de protocolos operacionais numa única plataforma robusta.", icon: ClipboardList },
+                  { title: "Eficiência", desc: "Automação de fluxos que reduzem o tempo de resposta operacional em até 40%.", icon: Clock }
+                ].map((item, idx) => (
+                  <div key={idx} className="flex gap-4">
+                    <div className="mt-1 bg-blue-50 p-2 rounded-lg text-blue-600">
+                      <item.icon className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-slate-900 text-lg">{item.title}</h4>
+                      <p className="text-slate-500">{item.desc}</p>
+                    </div>
                   </div>
-                  <h3 className="mb-2 text-xl font-semibold text-foreground">
-                    {feature.title}
-                  </h3>
-                  <p className="text-muted-foreground">{feature.description}</p>
-                </CardContent>
-              </Card>
-            ))}
+                ))}
+              </div>
+            </div>
+            <div className="relative">
+              <div className="aspect-square bg-slate-100 rounded-2xl overflow-hidden border border-slate-200 shadow-inner flex items-center justify-center relative group">
+                <div className="w-5/6 h-5/6 bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col transform group-hover:scale-105 transition-transform duration-500">
+                  <div className="h-10 bg-slate-50 border-b border-slate-200 flex items-center px-4 gap-2">
+                    <div className="w-3 h-3 rounded-full bg-red-400"></div>
+                    <div className="w-3 h-3 rounded-full bg-yellow-400"></div>
+                    <div className="w-3 h-3 rounded-full bg-green-400"></div>
+                    <div className="ml-4 h-5 w-32 bg-slate-200 rounded animate-pulse"></div>
+                  </div>
+                  <div className="flex-1 p-6 space-y-4">
+                    <div className="h-32 bg-blue-50 rounded-lg border border-blue-100 p-4">
+                      <div className="w-1/3 h-4 bg-blue-200 rounded mb-4"></div>
+                      <div className="grid grid-cols-4 gap-2">
+                         {[1,2,3,4].map(i => <div key={i} className="h-12 bg-white rounded shadow-sm"></div>)}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Benefits Section */}
-      <section className="border-y border-border bg-muted/30 py-24">
-        <div className="container mx-auto px-4">
-          <div className="grid items-center gap-12 lg:grid-cols-2">
-            <div>
-              <h2 className="mb-6 text-3xl font-bold text-foreground md:text-4xl">
-                Segurança e Controle
-                <span className="block text-primary">em Primeiro Lugar</span>
-              </h2>
-              <p className="mb-8 text-lg text-muted-foreground">
-                Desenvolvido para atender às exigências de segurança corporativa,
-                o Portal Esquadromil oferece controle total sobre acessos,
-                ações e informações da sua equipe.
-              </p>
-              <ul className="space-y-4">
-                {benefits.map((benefit) => (
-                  <li key={benefit} className="flex items-center gap-3">
-                    <div className="flex-shrink-0 rounded-full bg-success/10 p-1">
-                      <CheckCircle className="h-5 w-5 text-success" />
-                    </div>
-                    <span className="text-foreground">{benefit}</span>
-                  </li>
-                ))}
+      {/* Grelha de Módulos */}
+      <section id="modulos" className="py-24 bg-slate-50">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center max-w-2xl mx-auto mb-16">
+            <h2 className="text-blue-700 font-bold text-sm uppercase tracking-widest mb-4">Arquitetura de Módulos</h2>
+            <h3 className="text-4xl font-bold text-slate-900">Soluções integradas para cada necessidade operacional</h3>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {/* Chamados de TI */}
+            <div className="group bg-white p-8 rounded-2xl border border-slate-200 shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-300">
+              <div className="w-12 h-12 bg-blue-900 text-white rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                <Monitor className="w-6 h-6" />
+              </div>
+              <h4 className="text-xl font-bold text-slate-900 mb-4 group-hover:text-blue-700 transition-colors">Chamados de TI</h4>
+              <ul className="space-y-3 text-slate-600">
+                <li className="flex items-start gap-2">
+                  <ChevronRight className="w-4 h-4 text-blue-600 mt-1 shrink-0 group-hover:translate-x-1 transition-transform" />
+                  <span>Abertura inteligente com preenchimento automático</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <ChevronRight className="w-4 h-4 text-blue-600 mt-1 shrink-0 group-hover:translate-x-1 transition-transform" />
+                  <span>Acompanhamento em tempo real via Kanban</span>
+                </li>
               </ul>
             </div>
-            <div className="flex justify-center">
-              <div className="relative">
-                <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-primary/20 to-primary/5 blur-3xl" />
-                <Card className="relative border-2 border-primary/20 bg-card/80 backdrop-blur">
-                  <CardContent className="p-8">
-                    <div className="mb-6 flex items-center gap-4">
-                      <div className="rounded-full bg-primary/10 p-3">
-                        <Shield className="h-8 w-8 text-primary" />
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-semibold text-foreground">
-                          Perfis de Acesso
-                        </h3>
-                        <p className="text-sm text-muted-foreground">
-                          Controle granular de permissões
-                        </p>
-                      </div>
-                    </div>
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between rounded-lg bg-muted/50 p-3">
-                        <span className="font-medium text-foreground">TI</span>
-                        <span className="text-sm text-muted-foreground">Acesso Total</span>
-                      </div>
-                      <div className="flex items-center justify-between rounded-lg bg-muted/50 p-3">
-                        <span className="font-medium text-foreground">Guarita</span>
-                        <span className="text-sm text-muted-foreground">Controle de Acesso</span>
-                      </div>
-                      <div className="flex items-center justify-between rounded-lg bg-muted/50 p-3">
-                        <span className="font-medium text-foreground">Colaborador</span>
-                        <span className="text-sm text-muted-foreground">Chamados & Agendamentos</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+
+            {/* Agendamentos QR */}
+            <div className="group bg-white p-8 rounded-2xl border border-slate-200 shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-300">
+              <div className="w-12 h-12 bg-blue-600 text-white rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                <QrCode className="w-6 h-6" />
+              </div>
+              <h4 className="text-xl font-bold text-slate-900 mb-4 group-hover:text-blue-600 transition-colors">Agendamentos QR</h4>
+              <ul className="space-y-3 text-slate-600">
+                <li className="flex items-start gap-2">
+                  <ChevronRight className="w-4 h-4 text-blue-600 mt-1 shrink-0 group-hover:translate-x-1 transition-transform" />
+                  <span>Emissão de códigos com validade temporal</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <ChevronRight className="w-4 h-4 text-blue-600 mt-1 shrink-0 group-hover:translate-x-1 transition-transform" />
+                  <span>Validação instantânea na entrada e saída</span>
+                </li>
+              </ul>
+            </div>
+
+            {/* Painel de Guarita */}
+            <div className="group bg-white p-8 rounded-2xl border border-slate-200 shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-300">
+              <div className="w-12 h-12 bg-slate-800 text-white rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                <UserCheck className="w-6 h-6" />
+              </div>
+              <h4 className="text-xl font-bold text-slate-900 mb-4 group-hover:text-slate-700 transition-colors">Painel de Guarita</h4>
+              <ul className="space-y-3 text-slate-600">
+                <li className="flex items-start gap-2">
+                  <ChevronRight className="w-4 h-4 text-blue-600 mt-1 shrink-0 group-hover:translate-x-1 transition-transform" />
+                  <span>Terminal de validação para segurança</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <ChevronRight className="w-4 h-4 text-blue-600 mt-1 shrink-0 group-hover:translate-x-1 transition-transform" />
+                  <span>Zero papel: registo 100% digitalizado</span>
+                </li>
+              </ul>
+            </div>
+
+            {/* Inteligência Artificial */}
+            <div className="group bg-white p-8 rounded-2xl border border-slate-200 shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-300">
+              <div className="w-12 h-12 bg-blue-400 text-white rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                <Cpu className="w-6 h-6" />
+              </div>
+              <h4 className="text-xl font-bold text-slate-900 mb-4 group-hover:text-blue-500 transition-colors">Inteligência Artificial</h4>
+              <ul className="space-y-3 text-slate-600">
+                <li className="flex items-start gap-2">
+                  <ChevronRight className="w-4 h-4 text-blue-600 mt-1 shrink-0 group-hover:translate-x-1 transition-transform" />
+                  <span>Triagem inicial automatizada de incidentes</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <ChevronRight className="w-4 h-4 text-blue-600 mt-1 shrink-0 group-hover:translate-x-1 transition-transform" />
+                  <span>Sugestão de chamados via IA</span>
+                </li>
+              </ul>
+            </div>
+
+            {/* Gestão e Auditoria */}
+            <div className="group bg-white p-8 rounded-2xl border border-slate-200 shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 md:col-span-2">
+              <div className="grid md:grid-cols-2 gap-8 items-center">
+                <div>
+                  <div className="w-12 h-12 bg-blue-100 text-blue-900 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                    <LayoutDashboard className="w-6 h-6" />
+                  </div>
+                  <h4 className="text-xl font-bold text-slate-900 mb-4 group-hover:text-blue-900 transition-colors">Gestão e Auditoria</h4>
+                  <p className="text-slate-600 mb-6">Tomada de decisão baseada em governança clara.</p>
+                  <ul className="space-y-3 text-slate-600">
+                    <li className="flex items-start gap-2">
+                      <ChevronRight className="w-4 h-4 text-blue-600 mt-1 shrink-0 group-hover:translate-x-1 transition-transform" />
+                      <span>Transparência e conformidade em processos internos</span>
+                    </li>
+                  </ul>
+                </div>
+                <div className="bg-slate-50 p-6 rounded-xl border border-slate-200 group-hover:bg-blue-50 transition-colors duration-300">
+                   <div className="flex justify-between items-end h-32 gap-2">
+                      <div className="w-full bg-blue-200 h-[30%] rounded-t group-hover:h-[45%] transition-all duration-500"></div>
+                      <div className="w-full bg-blue-300 h-[60%] rounded-t group-hover:h-[75%] transition-all duration-500 delay-75"></div>
+                      <div className="w-full bg-blue-600 h-[90%] rounded-t group-hover:h-[100%] transition-all duration-500 delay-100"></div>
+                      <div className="w-full bg-blue-800 h-[75%] rounded-t group-hover:h-[85%] transition-all duration-500 delay-150"></div>
+                   </div>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-24">
-        <div className="container mx-auto px-4">
-          <div className="mx-auto max-w-3xl rounded-2xl bg-gradient-to-br from-primary to-institutional-dark p-12 text-center shadow-2xl">
-            <h2 className="mb-4 text-3xl font-bold text-primary-foreground md:text-4xl">
-              Pronto para Começar?
-            </h2>
-            <p className="mb-8 text-lg text-primary-foreground/80">
-              Acesse o portal com suas credenciais corporativas e aproveite
-              todas as funcionalidades disponíveis para seu perfil.
-            </p>
-            <Button
-              size="lg"
-              variant="secondary"
-              onClick={() => navigate('/login')}
-              className="px-10 py-6 text-lg font-semibold shadow-lg transition-all hover:scale-105"
-            >
-              Acessar Agora
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
+      {/* Security Section */}
+      <section id="seguranca" className="py-24 bg-white">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="bg-slate-50 rounded-3xl p-8 md:p-16 border border-slate-200 flex flex-col md:flex-row items-center gap-12">
+            <div className="flex-1">
+              <div className="inline-flex items-center gap-2 text-blue-700 font-bold mb-6">
+                <ShieldCheck className="w-6 h-6" />
+                <span>SEGURANÇA CORPORATIVA</span>
+              </div>
+              <h3 className="text-4xl font-bold text-slate-900 mb-6">Um sistema fechado projetado para segurança</h3>
+              <p className="text-lg text-slate-600 mb-8">
+                O Portal Esquadromil opera em ambiente controlado. A segurança é a base da plataforma.
+              </p>
+              <div className="grid grid-cols-2 gap-y-6">
+                {["Sem registo público", "Usuários via TI", "Logs de sessão", "Criptografia de ponta"].map((item, idx) => (
+                  <div key={idx} className="flex items-center gap-3">
+                    <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center text-green-600">
+                      <ChevronRight className="w-3 h-3" />
+                    </div>
+                    <span className="font-semibold text-slate-700">{item}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="w-full md:w-1/3 flex justify-center">
+              <div className="w-48 h-48 bg-blue-900 rounded-3xl rotate-12 flex items-center justify-center shadow-2xl transition-transform hover:rotate-0 duration-500">
+                <Lock className="w-20 h-20 text-blue-400 -rotate-12" />
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-border bg-muted/30 py-8">
-        <div className="container mx-auto px-4">
-          <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
-            <div className="flex items-center gap-3">
-              <img src={logoEsquadromil} alt="Esquadromil" className="h-8 w-8 object-contain" />
-              <span className="font-semibold text-foreground">Portal Esquadromil</span>
+      {/* Rodapé */}
+      <footer className="bg-slate-900 text-white pt-16 pb-8 border-t border-slate-800">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-12 border-b border-slate-800 pb-12">
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center gap-2">
+                <img src={logoEsquadromil} alt="Esquadromil" className="h-8 w-8 object-contain" />
+                <span className="text-xl font-bold tracking-tight">ESQUADROMIL</span>
+              </div>
+              <p className="text-slate-400 text-sm leading-relaxed max-w-xs">
+                Sistemas internos de alta confiabilidade para suporte operacional e infraestrutura estratégica.
+              </p>
             </div>
-            <p className="text-sm text-muted-foreground">
-              © {new Date().getFullYear()} Esquadromil. Todos os direitos reservados.
-              <span className="mx-2">•</span>
-              <span>Sistema de uso interno</span>
-            </p>
+            
+            <div className="flex flex-col gap-4">
+              <h4 className="text-blue-400 text-xs font-bold uppercase tracking-widest">Status do Sistema</h4>
+              <div className="space-y-3">
+                <div className="flex items-center gap-2.5 text-slate-300 text-sm">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  <span>Sistemas Online - Estável</span>
+                </div>
+                <div className="flex items-center gap-2 text-slate-400 text-sm">
+                  <Clock className="w-4 h-4" />
+                  <span>Última atualização: Hoje, 15:00</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-4">
+              <h4 className="text-blue-400 text-xs font-bold uppercase tracking-widest">Apoio Interno</h4>
+              <div className="space-y-3">
+                <button onClick={handleAccessClick} className="flex items-center gap-2 text-slate-300 text-sm hover:text-white transition-colors">
+                  <Search className="w-4 h-4 text-blue-500" />
+                  <span>Base de Conhecimento</span>
+                </button>
+                <button onClick={handleAccessClick} className="flex items-center gap-2 text-slate-300 text-sm hover:text-white transition-colors">
+                  <MessageSquare className="w-4 h-4 text-blue-500" />
+                  <span>Ticket de Suporte</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-col md:flex-row justify-between items-center gap-6 pt-4">
+            <div className="flex flex-col items-center md:items-start gap-1">
+              <p className="text-slate-500 text-xs tracking-wider uppercase font-semibold">
+                © 2026 Esquadromil | Uso Interno Exclusivo
+              </p>
+              <p className="text-blue-500 font-bold text-sm">
+                Desenvolvido por TI Esquadromil
+              </p>
+            </div>
+            
+            <div className="flex gap-4">
+              <div className="px-3 py-1 bg-slate-800 rounded text-[10px] font-bold text-slate-400 border border-slate-700">
+                VERSÃO 2.0
+              </div>
+              <div className="px-3 py-1 bg-blue-900/30 rounded text-[10px] font-bold text-blue-400 border border-blue-800/50 uppercase">
+                LGPD COMPLIANCE
+              </div>
+            </div>
           </div>
         </div>
       </footer>
