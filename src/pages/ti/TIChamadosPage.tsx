@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { DashboardLayout } from "@/components/layouts/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { downloadCSV, formatDateForCSV } from "@/lib/csvExport";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -34,6 +35,7 @@ import {
   AlertCircle,
   RefreshCw,
   Ticket as TicketIcon,
+  Download,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -163,6 +165,45 @@ export default function TIChamadosPage() {
                 ))}
               </SelectContent>
             </Select>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                downloadCSV(
+                  tickets.map(t => ({
+                    titulo: t.title,
+                    descricao: t.description || '',
+                    solicitante: t.creator?.full_name || '',
+                    setor: t.creator?.sector || '',
+                    atribuido: t.assignee?.full_name || '',
+                    status: statuses.find(s => s.id === t.status_id)?.name || '',
+                    urgencia: urgencies.find(u => u.id === t.urgency_id)?.name || '',
+                    criado_em: formatDateForCSV(t.created_at),
+                    atualizado_em: formatDateForCSV(t.updated_at),
+                    fechado_em: formatDateForCSV(t.closed_at),
+                    mensagens: t.messages?.length || 0,
+                  })),
+                  'chamados',
+                  [
+                    { key: 'titulo', label: 'Título' },
+                    { key: 'descricao', label: 'Descrição' },
+                    { key: 'solicitante', label: 'Solicitante' },
+                    { key: 'setor', label: 'Setor' },
+                    { key: 'atribuido', label: 'Atribuído a' },
+                    { key: 'status', label: 'Status' },
+                    { key: 'urgencia', label: 'Urgência' },
+                    { key: 'criado_em', label: 'Criado em' },
+                    { key: 'atualizado_em', label: 'Atualizado em' },
+                    { key: 'fechado_em', label: 'Fechado em' },
+                    { key: 'mensagens', label: 'Mensagens' },
+                  ]
+                );
+              }}
+              disabled={tickets.length === 0}
+            >
+              <Download className="mr-2 h-4 w-4" />
+              CSV
+            </Button>
           </CardContent>
         </Card>
 
@@ -380,13 +421,31 @@ export default function TIChamadosPage() {
                 </div>
 
                 {/* New Message */}
-                <div className="flex gap-2">
+                <div className="flex items-end gap-2">
                   <Textarea
                     placeholder="Digite uma mensagem..."
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
-                    className="min-h-20 resize-none"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSendMessage();
+                      }
+                    }}
+                    className="min-h-16 resize-none flex-1"
                   />
+                  <Button
+                    onClick={handleSendMessage}
+                    disabled={!newMessage.trim() || isSendingMessage}
+                    size="icon"
+                    className="h-10 w-10 shrink-0"
+                  >
+                    {isSendingMessage ? (
+                      <LoadingSpinner size="sm" />
+                    ) : (
+                      <Send className="h-4 w-4" />
+                    )}
+                  </Button>
                 </div>
               </div>
 
@@ -396,17 +455,6 @@ export default function TIChamadosPage() {
                   onClick={() => setSelectedTicket(null)}
                 >
                   Fechar
-                </Button>
-                <Button
-                  onClick={handleSendMessage}
-                  disabled={!newMessage.trim() || isSendingMessage}
-                >
-                  {isSendingMessage ? (
-                    <LoadingSpinner size="sm" className="mr-2" />
-                  ) : (
-                    <Send className="mr-2 h-4 w-4" />
-                  )}
-                  Enviar
                 </Button>
               </DialogFooter>
             </>
