@@ -7,7 +7,52 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-const SYSTEM_PROMPT = `Você é o Assistente TI da Esquadromil, especializado em suporte técnico de primeiro nível.
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+
+  try {
+    const authHeader = req.headers.get("authorization");
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: "Não autorizado" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+    const supabase = createClient(supabaseUrl, supabaseKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: "Não autorizado" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const { messages } = await req.json();
+
+    // Fetch knowledge base using service role to bypass RLS
+    const adminClient = createClient(supabaseUrl, serviceKey);
+    const { data: knowledgeItems } = await adminClient
+      .from("ai_knowledge_base")
+      .select("title, content")
+      .eq("is_active", true);
+
+    let knowledgeContext = "";
+    if (knowledgeItems && knowledgeItems.length > 0) {
+      knowledgeContext = "\n\nBASE DE CONHECIMENTO (use estas informações para responder):\n" +
+        knowledgeItems.map((item: any) => `### ${item.title}\n${item.content}`).join("\n\n");
+    }
+
+    const SYSTEM_PROMPT = `Você é o Assistente TI da Esquadromil, especializado em suporte técnico de primeiro nível.
 
 Suas responsabilidades:
 1. Ajudar colaboradores com problemas técnicos comuns (computador, rede, impressora, sistemas, etc.)
@@ -30,37 +75,7 @@ Quando identificar que é necessário abrir um chamado, responda com a seguinte 
 }
 \`\`\`
 
-Só inclua o JSON quando realmente for necessário abrir um chamado. Para dúvidas simples ou problemas que você conseguir resolver, não inclua o JSON.`;
-
-Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
-
-  try {
-    const authHeader = req.headers.get("authorization");
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: "Não autorizado" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return new Response(
-        JSON.stringify({ error: "Não autorizado" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const { messages } = await req.json();
+Só inclua o JSON quando realmente for necessário abrir um chamado.${knowledgeContext}`;
 
     const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
     if (!lovableApiKey) {

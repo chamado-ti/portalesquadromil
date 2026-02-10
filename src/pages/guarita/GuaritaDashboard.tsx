@@ -1,72 +1,49 @@
+import { DashboardLayout } from '@/components/layouts/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { DashboardLayout } from '@/components/layouts/DashboardLayout';
+import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
-import { Calendar, QrCode, Users, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { useGuaritaAppointments } from '@/hooks/useGuaritaAppointments';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { Calendar, QrCode, Users, Clock, CheckCircle, LogIn, LogOut } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 export default function GuaritaDashboard() {
   const { profile } = useAuth();
+  const { todayAppointments, isLoading, registerEntry, registerExit } = useGuaritaAppointments();
 
-  // Mock data
-  const todayAppointments = [
-    {
-      id: 1,
-      visitor: 'João Silva',
-      time: '09:00',
-      purpose: 'Reunião comercial',
-      status: 'pending',
-      collaborator: 'Maria Santos',
-    },
-    {
-      id: 2,
-      visitor: 'Ana Costa',
-      time: '10:30',
-      purpose: 'Entrega de documentos',
-      status: 'checked_in',
-      collaborator: 'Pedro Oliveira',
-    },
-    {
-      id: 3,
-      visitor: 'Carlos Mendes',
-      time: '14:00',
-      purpose: 'Entrevista',
-      status: 'pending',
-      collaborator: 'Fernanda Lima',
-    },
-  ];
+  const visitorsOnSite = todayAppointments.filter(a => a.entry_at && !a.exit_at).length;
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return (
-          <span className="status-badge status-waiting">
-            <Clock className="mr-1 h-3 w-3" />
-            Aguardando
-          </span>
-        );
-      case 'checked_in':
-        return (
-          <span className="status-badge status-progress">
-            <CheckCircle className="mr-1 h-3 w-3" />
-            No local
-          </span>
-        );
-      case 'checked_out':
-        return (
-          <span className="status-badge status-done">
-            <XCircle className="mr-1 h-3 w-3" />
-            Saiu
-          </span>
-        );
-      default:
-        return null;
+  const getStatusBadge = (apt: typeof todayAppointments[0]) => {
+    if (apt.exit_at) {
+      return (
+        <Badge variant="outline" className="bg-success/10 text-success border-success/20">
+          <CheckCircle className="mr-1 h-3 w-3" />
+          Saiu
+        </Badge>
+      );
     }
+    if (apt.entry_at) {
+      return (
+        <Badge variant="outline" className="bg-warning/10 text-warning border-warning/20">
+          <LogIn className="mr-1 h-3 w-3" />
+          No local
+        </Badge>
+      );
+    }
+    return (
+      <Badge variant="outline" className="bg-info/10 text-info border-info/20">
+        <Clock className="mr-1 h-3 w-3" />
+        Aguardando
+      </Badge>
+    );
   };
 
   return (
     <DashboardLayout>
       <div className="animate-fade-in space-y-6">
-        {/* Welcome */}
         <div className="mb-8">
           <h2 className="text-2xl font-bold text-foreground">
             Olá, {profile?.full_name?.split(' ')[0] || 'Guarita'}!
@@ -82,11 +59,9 @@ export default function GuaritaDashboard() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">
-                    Agendamentos Hoje
-                  </p>
+                  <p className="text-sm font-medium text-muted-foreground">Agendamentos Hoje</p>
                   <p className="mt-1 text-3xl font-bold text-foreground">
-                    {todayAppointments.length}
+                    {isLoading ? '...' : todayAppointments.length}
                   </p>
                 </div>
                 <div className="rounded-full bg-info/10 p-3">
@@ -100,11 +75,9 @@ export default function GuaritaDashboard() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">
-                    Visitantes no Local
-                  </p>
+                  <p className="text-sm font-medium text-muted-foreground">Visitantes no Local</p>
                   <p className="mt-1 text-3xl font-bold text-foreground">
-                    1
+                    {isLoading ? '...' : visitorsOnSite}
                   </p>
                 </div>
                 <div className="rounded-full bg-success/10 p-3">
@@ -116,10 +89,12 @@ export default function GuaritaDashboard() {
 
           <Card className="card-institutional cursor-pointer transition-all hover:shadow-lg">
             <CardContent className="flex h-full items-center justify-center p-6">
-              <Button size="lg" className="gap-2">
-                <QrCode className="h-5 w-5" />
-                Ler QR Code
-              </Button>
+              <Link to="/guarita/qrcode">
+                <Button size="lg" className="gap-2">
+                  <QrCode className="h-5 w-5" />
+                  Ler QR Code
+                </Button>
+              </Link>
             </CardContent>
           </Card>
         </div>
@@ -133,48 +108,52 @@ export default function GuaritaDashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {todayAppointments.map((appointment) => (
-                <div
-                  key={appointment.id}
-                  className="flex items-center justify-between rounded-lg border bg-secondary/30 p-4 transition-colors hover:bg-secondary/50"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 font-bold text-primary">
-                      {appointment.time}
+            {isLoading ? (
+              <div className="flex justify-center py-8">
+                <LoadingSpinner />
+              </div>
+            ) : todayAppointments.length === 0 ? (
+              <div className="py-8 text-center text-muted-foreground">
+                <Calendar className="mx-auto mb-2 h-12 w-12 opacity-30" />
+                <p>Nenhum agendamento para hoje</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {todayAppointments.map((apt) => (
+                  <div
+                    key={apt.id}
+                    className="flex items-center justify-between rounded-lg border bg-secondary/30 p-4 transition-colors hover:bg-secondary/50"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 font-bold text-primary text-sm">
+                        {apt.scheduled_time?.slice(0, 5)}
+                      </div>
+                      <div>
+                        <p className="font-medium text-foreground">{apt.visitor_name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {apt.purpose || 'Sem motivo'} • Resp: {apt.user?.full_name || '—'}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-medium text-foreground">
-                        {appointment.visitor}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {appointment.purpose} • Resp: {appointment.collaborator}
-                      </p>
+                    <div className="flex items-center gap-3">
+                      {getStatusBadge(apt)}
+                      {!apt.entry_at && (
+                        <Button size="sm" variant="outline" onClick={() => registerEntry(apt.id)}>
+                          <LogIn className="mr-1 h-3 w-3" />
+                          Liberar Entrada
+                        </Button>
+                      )}
+                      {apt.entry_at && !apt.exit_at && (
+                        <Button size="sm" variant="secondary" onClick={() => registerExit(apt.id)}>
+                          <LogOut className="mr-1 h-3 w-3" />
+                          Registrar Saída
+                        </Button>
+                      )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    {getStatusBadge(appointment.status)}
-                    {appointment.status === 'pending' && (
-                      <Button size="sm" variant="outline">
-                        Liberar Entrada
-                      </Button>
-                    )}
-                    {appointment.status === 'checked_in' && (
-                      <Button size="sm" variant="secondary">
-                        Registrar Saída
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              ))}
-
-              {todayAppointments.length === 0 && (
-                <div className="py-8 text-center text-muted-foreground">
-                  <Calendar className="mx-auto mb-2 h-12 w-12 opacity-30" />
-                  <p>Nenhum agendamento para hoje</p>
-                </div>
-              )}
-            </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

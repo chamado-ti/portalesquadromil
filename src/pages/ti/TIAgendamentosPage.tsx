@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { downloadCSV, formatDateForCSV } from "@/lib/csvExport";
 import {
   Table,
   TableBody,
@@ -30,6 +31,7 @@ import {
   AlertCircle,
   RefreshCw,
   Eye,
+  Download,
 } from "lucide-react";
 import { format, isToday, isTomorrow, isPast } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -154,6 +156,45 @@ export default function TIAgendamentosPage() {
               <Eye className="h-5 w-5" />
               Agendamentos (Somente Leitura)
             </CardTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                downloadCSV(
+                  filteredAppointments.map(a => ({
+                    visitante: a.visitor_name,
+                    documento: a.visitor_document || '',
+                    colaborador: a.user?.full_name || '',
+                    setor: a.user?.sector || '',
+                    data: a.scheduled_date,
+                    hora: a.scheduled_time?.substring(0, 5) || '',
+                    duracao: `${a.duration_minutes} min`,
+                    motivo: a.purpose || '',
+                    status: STATUS_CONFIG[a.status]?.label || a.status,
+                    entrada: formatDateForCSV(a.entry_at),
+                    saida: formatDateForCSV(a.exit_at),
+                  })),
+                  'agendamentos',
+                  [
+                    { key: 'visitante', label: 'Visitante' },
+                    { key: 'documento', label: 'Documento' },
+                    { key: 'colaborador', label: 'Colaborador' },
+                    { key: 'setor', label: 'Setor' },
+                    { key: 'data', label: 'Data' },
+                    { key: 'hora', label: 'Hora' },
+                    { key: 'duracao', label: 'Duração' },
+                    { key: 'motivo', label: 'Motivo' },
+                    { key: 'status', label: 'Status' },
+                    { key: 'entrada', label: 'Entrada' },
+                    { key: 'saida', label: 'Saída' },
+                  ]
+                );
+              }}
+              disabled={filteredAppointments.length === 0}
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Exportar CSV
+            </Button>
           </CardHeader>
           <CardContent>
             {/* Filters */}

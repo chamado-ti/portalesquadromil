@@ -94,10 +94,13 @@ export default function ColaboradorChamadosPage() {
 
   const getStatusColor = (color: string) => {
     const colors: Record<string, string> = {
-      blue: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
-      yellow: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20',
-      orange: 'bg-orange-500/10 text-orange-500 border-orange-500/20',
-      green: 'bg-green-500/10 text-green-500 border-green-500/20',
+      blue: 'bg-sky-500/15 text-sky-600 border-sky-500/30',
+      yellow: 'bg-amber-500/15 text-amber-600 border-amber-500/30',
+      orange: 'bg-orange-500/15 text-orange-600 border-orange-500/30',
+      green: 'bg-emerald-500/15 text-emerald-600 border-emerald-500/30',
+      red: 'bg-rose-500/15 text-rose-600 border-rose-500/30',
+      purple: 'bg-violet-500/15 text-violet-600 border-violet-500/30',
+      gray: 'bg-slate-500/15 text-slate-600 border-slate-500/30',
     };
     return colors[color] || 'bg-muted text-muted-foreground';
   };
