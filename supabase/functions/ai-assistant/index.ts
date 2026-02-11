@@ -80,10 +80,12 @@ Só inclua o JSON quando realmente for necessário abrir um chamado.${knowledgeC
     const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
     if (!lovableApiKey) {
       return new Response(
-        JSON.stringify({ error: "LOVABLE_API_KEY não configurada" }),
+        JSON.stringify({ error: "Chave de API da IA não configurada. Entre em contato com o administrador." }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    console.log("Calling AI Gateway...");
 
     const response = await fetch("https://ai-gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -104,9 +106,9 @@ Só inclua o JSON quando realmente for necessário abrir um chamado.${knowledgeC
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("AI Gateway error:", errorText);
+      console.error("AI Gateway error:", response.status, errorText);
       return new Response(
-        JSON.stringify({ error: "Erro ao processar mensagem" }),
+        JSON.stringify({ error: `Erro ao processar mensagem (${response.status})` }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -121,7 +123,7 @@ Só inclua o JSON quando realmente for necessário abrir um chamado.${knowledgeC
   } catch (error) {
     console.error("Error:", error);
     return new Response(
-      JSON.stringify({ error: "Erro interno do servidor" }),
+      JSON.stringify({ error: "Erro interno do servidor: " + (error as Error).message }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

@@ -1,7 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { DashboardLayout } from '@/components/layouts/DashboardLayout';
 import { useAuth } from '@/contexts/AuthContext';
+import { useColaboradorTickets } from '@/hooks/useColaboradorTickets';
+import { useColaboradorAppointments } from '@/hooks/useColaboradorAppointments';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { Link } from 'react-router-dom';
 import {
   Bot,
@@ -11,33 +15,30 @@ import {
   ArrowRight,
   Plus,
 } from 'lucide-react';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 export default function ColaboradorDashboard() {
   const { profile } = useAuth();
+  const { tickets, isLoading: isLoadingTickets } = useColaboradorTickets();
+  const { appointments, isLoading: isLoadingAppointments } = useColaboradorAppointments();
 
-  // Mock data
-  const myTickets = [
-    { id: 1, title: 'Mouse com defeito', status: 'Em Andamento', createdAt: '02/02/2026' },
-    { id: 2, title: 'Acesso ao sistema', status: 'Novo', createdAt: '01/02/2026' },
-  ];
+  const recentTickets = tickets.slice(0, 3);
+  const upcomingAppointments = appointments
+    .filter(a => a.status === 'pending' || (a.status === 'in_progress' && !a.exit_at))
+    .slice(0, 3);
 
-  const myAppointments = [
-    { id: 1, visitor: 'Cliente ABC', date: '05/02/2026', time: '10:00' },
-  ];
-
-  const getStatusClass = (status: string) => {
-    switch (status) {
-      case 'Novo':
-        return 'status-new';
-      case 'Em Andamento':
-        return 'status-progress';
-      case 'Aguardando':
-        return 'status-waiting';
-      case 'Finalizado':
-        return 'status-done';
-      default:
-        return '';
-    }
+  const getStatusColor = (color: string) => {
+    const colors: Record<string, string> = {
+      blue: 'bg-sky-500/15 text-sky-600 border-sky-500/30',
+      yellow: 'bg-amber-500/15 text-amber-600 border-amber-500/30',
+      orange: 'bg-orange-500/15 text-orange-600 border-orange-500/30',
+      green: 'bg-emerald-500/15 text-emerald-600 border-emerald-500/30',
+      red: 'bg-rose-500/15 text-rose-600 border-rose-500/30',
+      purple: 'bg-violet-500/15 text-violet-600 border-violet-500/30',
+      gray: 'bg-slate-500/15 text-slate-600 border-slate-500/30',
+    };
+    return colors[color] || 'bg-muted text-muted-foreground';
   };
 
   return (
@@ -128,9 +129,13 @@ export default function ColaboradorDashboard() {
             </Link>
           </CardHeader>
           <CardContent>
-            {myTickets.length > 0 ? (
+            {isLoadingTickets ? (
+              <div className="flex justify-center py-8">
+                <LoadingSpinner />
+              </div>
+            ) : recentTickets.length > 0 ? (
               <div className="space-y-3">
-                {myTickets.map((ticket) => (
+                {recentTickets.map((ticket) => (
                   <div
                     key={ticket.id}
                     className="flex items-center justify-between rounded-lg border bg-secondary/30 p-4 transition-colors hover:bg-secondary/50"
@@ -138,12 +143,14 @@ export default function ColaboradorDashboard() {
                     <div>
                       <p className="font-medium text-foreground">{ticket.title}</p>
                       <p className="text-sm text-muted-foreground">
-                        Aberto em {ticket.createdAt}
+                        Aberto em {format(new Date(ticket.created_at), "dd/MM/yyyy", { locale: ptBR })}
                       </p>
                     </div>
-                    <span className={`status-badge ${getStatusClass(ticket.status)}`}>
-                      {ticket.status}
-                    </span>
+                    {ticket.status && (
+                      <Badge variant="outline" className={getStatusColor(ticket.status.color)}>
+                        {ticket.status.name}
+                      </Badge>
+                    )}
                   </div>
                 ))}
               </div>
@@ -171,9 +178,13 @@ export default function ColaboradorDashboard() {
             </Link>
           </CardHeader>
           <CardContent>
-            {myAppointments.length > 0 ? (
+            {isLoadingAppointments ? (
+              <div className="flex justify-center py-8">
+                <LoadingSpinner />
+              </div>
+            ) : upcomingAppointments.length > 0 ? (
               <div className="space-y-3">
-                {myAppointments.map((appointment) => (
+                {upcomingAppointments.map((appointment) => (
                   <div
                     key={appointment.id}
                     className="flex items-center justify-between rounded-lg border bg-secondary/30 p-4 transition-colors hover:bg-secondary/50"
@@ -181,20 +192,22 @@ export default function ColaboradorDashboard() {
                     <div className="flex items-center gap-4">
                       <div className="flex h-12 w-12 flex-col items-center justify-center rounded-lg bg-primary/10 text-primary">
                         <Clock className="h-4 w-4" />
-                        <span className="text-xs font-bold">{appointment.time}</span>
+                        <span className="text-xs font-bold">{appointment.scheduled_time.slice(0, 5)}</span>
                       </div>
                       <div>
                         <p className="font-medium text-foreground">
-                          {appointment.visitor}
+                          {appointment.visitor_name}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          {appointment.date}
+                          {format(new Date(appointment.scheduled_date), "dd/MM/yyyy", { locale: ptBR })}
                         </p>
                       </div>
                     </div>
-                    <Button variant="outline" size="sm">
-                      Ver QR Code
-                    </Button>
+                    <Link to="/colaborador/agendamentos">
+                      <Button variant="outline" size="sm">
+                        Ver detalhes
+                      </Button>
+                    </Link>
                   </div>
                 ))}
               </div>

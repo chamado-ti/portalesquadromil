@@ -26,6 +26,7 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { signOut, getRoleLabel, getRoleColor, type AppRole } from '@/lib/auth';
 import { useToast } from '@/hooks/use-toast';
+import { useSystemSettings } from '@/hooks/useSystemSettings';
 import logoEsquadromil from '@/assets/logo-esquadromil.png';
 
 interface NavItem {
@@ -67,6 +68,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { profile, role } = useAuth();
+  const { getSetting } = useSystemSettings();
+
+  const customLogo = getSetting('company_logo') as { url?: string } | undefined;
+  const logoSrc = customLogo?.url || logoEsquadromil;
 
   const filteredNavItems = navItems.filter(
     (item) => role && item.roles.includes(role)
@@ -110,7 +115,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           {!collapsed && (
             <Link to="/" className="flex items-center gap-3">
               <img
-                src={logoEsquadromil}
+                src={logoSrc}
                 alt="Esquadromil"
                 className="h-8 w-8 object-contain"
               />
@@ -119,19 +124,37 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               </span>
             </Link>
           )}
+          {collapsed && (
+            <Link to="/" className="mx-auto">
+              <img
+                src={logoSrc}
+                alt="Esquadromil"
+                className="h-8 w-8 object-contain"
+              />
+            </Link>
+          )}
           <Button
             variant="ghost"
             size="icon"
             onClick={() => setCollapsed(!collapsed)}
-            className="text-sidebar-foreground hover:bg-sidebar-accent"
+            className={cn("text-sidebar-foreground hover:bg-sidebar-accent", collapsed && "hidden")}
           >
-            {collapsed ? (
-              <Menu className="h-5 w-5" />
-            ) : (
-              <ChevronLeft className="h-5 w-5" />
-            )}
+            <ChevronLeft className="h-5 w-5" />
           </Button>
         </div>
+
+        {collapsed && (
+          <div className="flex justify-center py-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setCollapsed(false)}
+              className="text-sidebar-foreground hover:bg-sidebar-accent"
+            >
+              <Menu className="h-5 w-5" />
+            </Button>
+          </div>
+        )}
 
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto py-4">
@@ -252,8 +275,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="icon" className="relative">
               <Bell className="h-5 w-5" />
-              {/* Notification indicator */}
-              <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-destructive" />
             </Button>
           </div>
         </header>
