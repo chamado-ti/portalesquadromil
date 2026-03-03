@@ -27,6 +27,7 @@ import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { useConfigurations } from "@/hooks/useConfigurations";
 import { useSystemSettings } from "@/hooks/useSystemSettings";
 import { useAIKnowledgeBase } from "@/hooks/useAIKnowledgeBase";
+import { useSectors } from "@/hooks/useSectors";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -43,6 +44,7 @@ import {
   Image,
   Bot,
   BookOpen,
+  Building2,
 } from "lucide-react";
 
 export default function TIConfiguracoesPage() {
@@ -70,6 +72,10 @@ export default function TIConfiguracoesPage() {
     isCreating: isCreatingKnowledge,
   } = useAIKnowledgeBase();
 
+  const { sectors, createSector, updateSector, deleteSector } = useSectors();
+  const [sectorDialog, setSectorDialog] = useState(false);
+  const [sectorName, setSectorName] = useState("");
+  const [selectedSector, setSelectedSector] = useState<{ id: string; name: string } | null>(null);
   const [categoryDialog, setCategoryDialog] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<{
     id: string;
@@ -228,10 +234,14 @@ export default function TIConfiguracoesPage() {
           </div>
         ) : (
           <Tabs defaultValue="categories" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-5">
+            <TabsList className="grid w-full grid-cols-6">
               <TabsTrigger value="categories" className="gap-2">
                 <Tag className="h-4 w-4" />
                 <span className="hidden sm:inline">Categorias</span>
+              </TabsTrigger>
+              <TabsTrigger value="sectors" className="gap-2">
+                <Building2 className="h-4 w-4" />
+                <span className="hidden sm:inline">Setores</span>
               </TabsTrigger>
               <TabsTrigger value="urgencies" className="gap-2">
                 <Zap className="h-4 w-4" />
@@ -306,7 +316,58 @@ export default function TIConfiguracoesPage() {
               </Card>
             </TabsContent>
 
-            {/* Urgencies */}
+            {/* Sectors */}
+            <TabsContent value="sectors">
+              <Card className="card-institutional">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                  <div>
+                    <CardTitle>Setores</CardTitle>
+                    <CardDescription>Gerencie os setores da empresa</CardDescription>
+                  </div>
+                  <Button onClick={() => { setSelectedSector(null); setSectorName(""); setSectorDialog(true); }}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Novo Setor
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  {sectors.length === 0 ? (
+                    <div className="py-12 text-center">
+                      <Building2 className="mx-auto mb-4 h-12 w-12 text-muted-foreground/50" />
+                      <p className="text-muted-foreground">Nenhum setor cadastrado</p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto rounded-lg border">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Nome</TableHead>
+                            <TableHead className="text-right">Ações</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {sectors.map((sector) => (
+                            <TableRow key={sector.id}>
+                              <TableCell className="font-medium">{sector.name}</TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex justify-end gap-2">
+                                  <Button variant="ghost" size="icon" onClick={() => { setSelectedSector(sector); setSectorName(sector.name); setSectorDialog(true); }}>
+                                    <Pencil className="h-4 w-4" />
+                                  </Button>
+                                  <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => { if (confirm("Excluir setor?")) deleteSector(sector.id); }}>
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
             <TabsContent value="urgencies">
               <Card className="card-institutional">
                 <CardHeader>
@@ -565,6 +626,32 @@ export default function TIConfiguracoesPage() {
             >
               {isCreatingKnowledge && <LoadingSpinner size="sm" className="mr-2" />}
               {selectedKnowledge ? "Salvar" : "Adicionar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Sector Dialog */}
+      <Dialog open={sectorDialog} onOpenChange={setSectorDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{selectedSector ? "Editar Setor" : "Novo Setor"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Nome do Setor *</Label>
+              <Input value={sectorName} onChange={(e) => setSectorName(e.target.value)} placeholder="Ex: Financeiro, RH, Operações..." />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSectorDialog(false)}>Cancelar</Button>
+            <Button onClick={async () => {
+              if (!sectorName.trim()) return;
+              if (selectedSector) await updateSector({ id: selectedSector.id, name: sectorName });
+              else await createSector(sectorName);
+              setSectorDialog(false);
+            }} disabled={!sectorName.trim()}>
+              {selectedSector ? "Salvar" : "Criar"}
             </Button>
           </DialogFooter>
         </DialogContent>
