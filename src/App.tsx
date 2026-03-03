@@ -19,6 +19,7 @@ import TIChamadosPage from "./pages/ti/TIChamadosPage";
 import TIAgendamentosPage from "./pages/ti/TIAgendamentosPage";
 import TILogsPage from "./pages/ti/TILogsPage";
 import TIConfiguracoesPage from "./pages/ti/TIConfiguracoesPage";
+import TIRelatoriosPage from "./pages/ti/TIRelatoriosPage";
 
 // Guarita pages
 import GuaritaDashboard from "./pages/guarita/GuaritaDashboard";
@@ -99,6 +100,14 @@ const App = () => (
                 element={
                   <ProtectedRoute allowedRoles={['ti']}>
                     <TIConfiguracoesPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/ti/relatorios"
+                element={
+                  <ProtectedRoute allowedRoles={['ti']}>
+                    <TIRelatoriosPage />
                   </ProtectedRoute>
                 }
               />

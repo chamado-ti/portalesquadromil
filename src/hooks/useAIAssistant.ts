@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from '@tanstack/react-query';
 
 export interface ChatMessage {
   id: string;
@@ -16,6 +17,7 @@ export interface ChatMessage {
 export function useAIAssistant() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const queryClient = useQueryClient();
 
   const parseTicketSuggestion = (content: string) => {
     const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/);
@@ -39,6 +41,26 @@ export function useAIAssistant() {
   const cleanMessageContent = (content: string) => {
     return content.replace(/```json\s*[\s\S]*?\s*```/, '').trim();
   };
+
+  const autoCreateTicket = useCallback(async (suggestion: ChatMessage['ticketSuggestion']) => {
+    if (!suggestion) return;
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('ai-assistant', {
+        body: { 
+          messages: [{ role: 'user', content: 'Criar chamado automaticamente' }],
+          autoCreateTicket: suggestion 
+        },
+      });
+      
+      if (!error) {
+        queryClient.invalidateQueries({ queryKey: ['colaborador-tickets'] });
+        queryClient.invalidateQueries({ queryKey: ['tickets'] });
+      }
+    } catch (err) {
+      console.error('Error auto-creating ticket:', err);
+    }
+  }, [queryClient]);
 
   const sendMessage = useCallback(async (userMessage: string) => {
     const userChatMessage: ChatMessage = {
@@ -98,5 +120,6 @@ export function useAIAssistant() {
     isLoading,
     sendMessage,
     clearMessages,
+    autoCreateTicket,
   };
 }

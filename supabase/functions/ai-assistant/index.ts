@@ -4,7 +4,7 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 Deno.serve(async (req) => {
@@ -37,7 +37,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { messages } = await req.json();
+    const { messages, autoCreateTicket } = await req.json();
 
     // Fetch knowledge base using service role to bypass RLS
     const adminClient = createClient(supabaseUrl, serviceKey);
@@ -80,41 +80,89 @@ Só inclua o JSON quando realmente for necessário abrir um chamado.${knowledgeC
     const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
     if (!lovableApiKey) {
       return new Response(
-        JSON.stringify({ error: "Chave de API da IA não configurada. Entre em contato com o administrador." }),
+        JSON.stringify({ error: "Chave de API da IA não configurada." }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    console.log("Calling AI Gateway...");
+    console.log("Calling AI Gateway with proper URL...");
 
-    const response = await fetch("https://ai-gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${lovableApiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          ...messages,
-        ],
-        temperature: 0.7,
-        max_tokens: 1024,
-      }),
-    });
+    // Try multiple gateway URLs
+    const gatewayUrls = [
+      "https://ai-gateway.lovable.dev/v1/chat/completions",
+      "https://ai-gateway.lovableproject.com/v1/chat/completions",
+    ];
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("AI Gateway error:", response.status, errorText);
+    let aiResponse = null;
+    let lastError = null;
+
+    for (const url of gatewayUrls) {
+      try {
+        console.log(`Trying: ${url}`);
+        const response = await fetch(url, {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${lovableApiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "google/gemini-2.5-flash",
+            messages: [
+              { role: "system", content: SYSTEM_PROMPT },
+              ...messages,
+            ],
+            temperature: 0.7,
+            max_tokens: 1024,
+          }),
+        });
+
+        if (response.ok) {
+          aiResponse = await response.json();
+          break;
+        } else {
+          lastError = `${url}: ${response.status} ${await response.text()}`;
+          console.error(lastError);
+        }
+      } catch (e) {
+        lastError = `${url}: ${(e as Error).message}`;
+        console.error(lastError);
+      }
+    }
+
+    if (!aiResponse) {
+      console.error("All AI gateways failed:", lastError);
       return new Response(
-        JSON.stringify({ error: `Erro ao processar mensagem (${response.status})` }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: `Erro ao conectar com a IA. Tente novamente em alguns instantes.` }),
+        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const data = await response.json();
-    const assistantMessage = data.choices?.[0]?.message?.content || "Desculpe, não consegui processar sua mensagem.";
+    const assistantMessage = aiResponse.choices?.[0]?.message?.content || "Desculpe, não consegui processar sua mensagem.";
+
+    // If autoCreateTicket is requested, create the ticket automatically
+    if (autoCreateTicket) {
+      try {
+        // Get default status
+        const { data: statuses } = await supabase
+          .from("ticket_statuses")
+          .select("id")
+          .order("sort_order")
+          .limit(1);
+
+        const statusId = statuses?.[0]?.id;
+        if (statusId) {
+          await supabase.from("tickets").insert({
+            title: autoCreateTicket.titulo,
+            description: autoCreateTicket.descricao,
+            created_by: user.id,
+            status_id: statusId,
+          });
+          console.log("Auto-created ticket:", autoCreateTicket.titulo);
+        }
+      } catch (ticketErr) {
+        console.error("Error auto-creating ticket:", ticketErr);
+      }
+    }
 
     return new Response(
       JSON.stringify({ message: assistantMessage }),

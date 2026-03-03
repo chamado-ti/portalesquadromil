@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { DashboardLayout } from "@/components/layouts/DashboardLayout";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,6 +34,7 @@ import {
   RefreshCw,
   Eye,
   Download,
+  Trash2,
 } from "lucide-react";
 import { format, isToday, isTomorrow, isPast } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -46,6 +49,7 @@ const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
 
 export default function TIAgendamentosPage() {
   const { appointments, isLoading, error, refetch } = useAppointments();
+  const { toast } = useToast();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -154,7 +158,7 @@ export default function TIAgendamentosPage() {
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
             <CardTitle className="flex items-center gap-2">
               <Eye className="h-5 w-5" />
-              Agendamentos (Somente Leitura)
+              Agendamentos
             </CardTitle>
             <Button
               variant="outline"
@@ -259,6 +263,7 @@ export default function TIAgendamentosPage() {
                       <TableHead>Duração</TableHead>
                       <TableHead>Motivo</TableHead>
                       <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -334,6 +339,21 @@ export default function TIAgendamentosPage() {
                             {STATUS_CONFIG[apt.status]?.label || apt.status}
                           </Badge>
                         </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-destructive hover:text-destructive"
+                            onClick={async () => {
+                              if (!confirm('Deseja excluir este agendamento?')) return;
+                              const { error: delErr } = await supabase.from('appointments').delete().eq('id', apt.id);
+                              if (delErr) toast({ title: 'Erro ao excluir', description: delErr.message, variant: 'destructive' });
+                              else { toast({ title: 'Agendamento excluído' }); refetch(); }
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -341,14 +361,6 @@ export default function TIAgendamentosPage() {
               </div>
             )}
 
-            {/* Info note */}
-            <div className="mt-4 flex items-center gap-2 rounded-lg border border-info/30 bg-info/5 p-3 text-sm text-info">
-              <Eye className="h-4 w-4 shrink-0" />
-              <p>
-                Esta é uma visualização somente leitura. Agendamentos são criados e
-                gerenciados pelos colaboradores.
-              </p>
-            </div>
           </CardContent>
         </Card>
       </div>

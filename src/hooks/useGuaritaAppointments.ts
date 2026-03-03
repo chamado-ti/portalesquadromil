@@ -15,6 +15,7 @@ export interface GuaritaAppointment {
   qr_code: string | null;
   entry_at: string | null;
   exit_at: string | null;
+  notes: string | null;
   user?: {
     full_name: string;
     sector: string | null;

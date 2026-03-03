@@ -4,7 +4,7 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 Deno.serve(async (req) => {
@@ -35,7 +35,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Check if user is guarita
     const { data: roleData } = await supabase
       .from("user_roles")
       .select("role")
@@ -58,39 +57,36 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Find appointment by QR code
-    const { data: appointment, error: appointmentError } = await supabase
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const adminClient = createClient(supabaseUrl, serviceKey);
+
+    // Find appointment by QR code using admin client to bypass RLS
+    const { data: appointment, error: appointmentError } = await adminClient
       .from("appointments")
-      .select(`
-        *,
-        profiles:user_id (full_name, email, sector)
-      `)
+      .select("*")
       .eq("qr_code", qr_code)
       .single();
 
     if (appointmentError || !appointment) {
       return new Response(
-        JSON.stringify({ 
-          valid: false, 
-          error: "QR Code inválido ou não encontrado" 
-        }),
+        JSON.stringify({ valid: false, error: "QR Code inválido ou não encontrado" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
+    // Fetch profile
+    const { data: profile } = await adminClient
+      .from("profiles")
+      .select("full_name, email, sector")
+      .eq("id", appointment.user_id)
+      .single();
+
     const now = new Date();
-    const scheduledDate = new Date(appointment.scheduled_date);
-    const [hours, minutes] = appointment.scheduled_time.split(":").map(Number);
-    scheduledDate.setHours(hours, minutes, 0, 0);
 
-    const endTime = new Date(scheduledDate);
-    endTime.setMinutes(endTime.getMinutes() + appointment.duration_minutes);
-
-    // Check if QR code has expired
     if (appointment.qr_expires_at && new Date(appointment.qr_expires_at) < now) {
       return new Response(
-        JSON.stringify({ 
-          valid: false, 
+        JSON.stringify({
+          valid: false,
           error: "QR Code expirado",
           appointment: {
             visitor_name: appointment.visitor_name,
@@ -102,11 +98,10 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Check if already checked out
     if (appointment.exit_at) {
       return new Response(
-        JSON.stringify({ 
-          valid: false, 
+        JSON.stringify({
+          valid: false,
           error: "QR Code já utilizado (visitante já saiu)",
           appointment: {
             visitor_name: appointment.visitor_name,
@@ -118,29 +113,17 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Process action
     if (action === "entry") {
       if (appointment.entry_at) {
         return new Response(
-          JSON.stringify({ 
-            valid: false, 
-            error: "Entrada já registrada",
-            appointment: {
-              visitor_name: appointment.visitor_name,
-              entry_at: appointment.entry_at,
-            }
-          }),
+          JSON.stringify({ valid: false, error: "Entrada já registrada", appointment: { visitor_name: appointment.visitor_name, entry_at: appointment.entry_at } }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
-      // Register entry
-      const { error: updateError } = await supabase
+      const { error: updateError } = await adminClient
         .from("appointments")
-        .update({ 
-          entry_at: now.toISOString(),
-          status: "in_progress"
-        })
+        .update({ entry_at: now.toISOString(), status: "in_progress" })
         .eq("id", appointment.id);
 
       if (updateError) {
@@ -150,22 +133,9 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Log the action
-      await supabase.from("audit_logs").insert({
-        action: "appointment_entry",
-        entity_type: "appointment",
-        entity_id: appointment.id,
-        user_id: user.id,
-        details: {
-          visitor_name: appointment.visitor_name,
-          colaborador: appointment.profiles?.full_name,
-          sector: appointment.profiles?.sector,
-        },
-      });
-
       return new Response(
-        JSON.stringify({ 
-          valid: true, 
+        JSON.stringify({
+          valid: true,
           action: "entry",
           message: "Entrada registrada com sucesso",
           appointment: {
@@ -175,8 +145,8 @@ Deno.serve(async (req) => {
             purpose: appointment.purpose,
             scheduled_time: appointment.scheduled_time,
             duration_minutes: appointment.duration_minutes,
-            colaborador: appointment.profiles?.full_name,
-            sector: appointment.profiles?.sector,
+            colaborador: profile?.full_name,
+            sector: profile?.sector,
             entry_at: now.toISOString(),
           }
         }),
@@ -185,21 +155,14 @@ Deno.serve(async (req) => {
     } else if (action === "exit") {
       if (!appointment.entry_at) {
         return new Response(
-          JSON.stringify({ 
-            valid: false, 
-            error: "Entrada não registrada. Registre a entrada primeiro.",
-          }),
+          JSON.stringify({ valid: false, error: "Entrada não registrada. Registre a entrada primeiro." }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
-      // Register exit
-      const { error: updateError } = await supabase
+      const { error: updateError } = await adminClient
         .from("appointments")
-        .update({ 
-          exit_at: now.toISOString(),
-          status: "completed"
-        })
+        .update({ exit_at: now.toISOString(), status: "completed" })
         .eq("id", appointment.id);
 
       if (updateError) {
@@ -209,28 +172,12 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Calculate duration
       const entryTime = new Date(appointment.entry_at);
-      const durationMs = now.getTime() - entryTime.getTime();
-      const durationMinutes = Math.round(durationMs / 60000);
-
-      // Log the action
-      await supabase.from("audit_logs").insert({
-        action: "appointment_exit",
-        entity_type: "appointment",
-        entity_id: appointment.id,
-        user_id: user.id,
-        details: {
-          visitor_name: appointment.visitor_name,
-          colaborador: appointment.profiles?.full_name,
-          sector: appointment.profiles?.sector,
-          duration_minutes: durationMinutes,
-        },
-      });
+      const durationMinutes = Math.round((now.getTime() - entryTime.getTime()) / 60000);
 
       return new Response(
-        JSON.stringify({ 
-          valid: true, 
+        JSON.stringify({
+          valid: true,
           action: "exit",
           message: "Saída registrada com sucesso",
           appointment: {
@@ -239,17 +186,16 @@ Deno.serve(async (req) => {
             entry_at: appointment.entry_at,
             exit_at: now.toISOString(),
             duration_minutes: durationMinutes,
-            colaborador: appointment.profiles?.full_name,
-            sector: appointment.profiles?.sector,
+            colaborador: profile?.full_name,
+            sector: profile?.sector,
           }
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     } else {
-      // Just validate
       return new Response(
-        JSON.stringify({ 
-          valid: true, 
+        JSON.stringify({
+          valid: true,
           message: "QR Code válido",
           appointment: {
             id: appointment.id,
@@ -261,8 +207,8 @@ Deno.serve(async (req) => {
             duration_minutes: appointment.duration_minutes,
             status: appointment.status,
             entry_at: appointment.entry_at,
-            colaborador: appointment.profiles?.full_name,
-            sector: appointment.profiles?.sector,
+            colaborador: profile?.full_name,
+            sector: profile?.sector,
           }
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }

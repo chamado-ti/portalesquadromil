@@ -14,6 +14,7 @@ import {
   QrCode,
   Settings,
   History,
+  BarChart3,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -44,6 +45,7 @@ const navItems: NavItem[] = [
   { label: 'Chamados', href: '/ti/chamados', icon: Ticket, roles: ['ti'] },
   { label: 'Agendamentos', href: '/ti/agendamentos', icon: Calendar, roles: ['ti'] },
   { label: 'Logs', href: '/ti/logs', icon: FileText, roles: ['ti'] },
+  { label: 'Relatórios', href: '/ti/relatorios', icon: BarChart3, roles: ['ti'] },
   { label: 'Configurações', href: '/ti/configuracoes', icon: Settings, roles: ['ti'] },
 
   // Guarita routes
