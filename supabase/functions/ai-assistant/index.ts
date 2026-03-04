@@ -77,72 +77,62 @@ Quando identificar que é necessário abrir um chamado, responda com a seguinte 
 
 Só inclua o JSON quando realmente for necessário abrir um chamado.${knowledgeContext}`;
 
-    const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
-    if (!lovableApiKey) {
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) {
       return new Response(
         JSON.stringify({ error: "Chave de API da IA não configurada." }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    console.log("Calling AI Gateway with proper URL...");
+    console.log("Calling Lovable AI Gateway...");
 
-    // Try multiple gateway URLs
-    const gatewayUrls = [
-      "https://ai-gateway.lovable.dev/v1/chat/completions",
-      "https://ai-gateway.lovableproject.com/v1/chat/completions",
-    ];
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          ...messages,
+        ],
+        temperature: 0.7,
+        max_tokens: 1024,
+      }),
+    });
 
-    let aiResponse = null;
-    let lastError = null;
-
-    for (const url of gatewayUrls) {
-      try {
-        console.log(`Trying: ${url}`);
-        const response = await fetch(url, {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${lovableApiKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model: "google/gemini-2.5-flash",
-            messages: [
-              { role: "system", content: SYSTEM_PROMPT },
-              ...messages,
-            ],
-            temperature: 0.7,
-            max_tokens: 1024,
-          }),
-        });
-
-        if (response.ok) {
-          aiResponse = await response.json();
-          break;
-        } else {
-          lastError = `${url}: ${response.status} ${await response.text()}`;
-          console.error(lastError);
-        }
-      } catch (e) {
-        lastError = `${url}: ${(e as Error).message}`;
-        console.error(lastError);
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("AI Gateway error:", response.status, errorText);
+      
+      if (response.status === 429) {
+        return new Response(
+          JSON.stringify({ error: "Limite de requisições atingido. Tente novamente em alguns instantes." }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
-    }
-
-    if (!aiResponse) {
-      console.error("All AI gateways failed:", lastError);
+      if (response.status === 402) {
+        return new Response(
+          JSON.stringify({ error: "Créditos de IA esgotados." }),
+          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
       return new Response(
-        JSON.stringify({ error: `Erro ao conectar com a IA. Tente novamente em alguns instantes.` }),
+        JSON.stringify({ error: "Erro ao conectar com a IA. Tente novamente." }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
+    const aiResponse = await response.json();
     const assistantMessage = aiResponse.choices?.[0]?.message?.content || "Desculpe, não consegui processar sua mensagem.";
 
     // If autoCreateTicket is requested, create the ticket automatically
     if (autoCreateTicket) {
       try {
-        // Get default status
         const { data: statuses } = await supabase
           .from("ticket_statuses")
           .select("id")

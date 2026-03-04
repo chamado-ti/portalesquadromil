@@ -82,7 +82,7 @@ export default function Landing() {
       <nav className={`fixed top-0 w-full z-50 transition-all duration-300 ${isScrolled ? 'bg-white shadow-md py-3' : 'bg-transparent py-5'}`}>
         <div className="max-w-7xl mx-auto px-6 flex justify-between items-center">
           <div className="flex items-center gap-2">
-            <img src={logoEsquadromil} alt="Esquadromil" className="h-8 w-8 object-contain" />
+            <img src={logoEsquadromil} alt="Esquadromil" className="h-8 w-8 object-contain" style={{ filter: isScrolled ? 'none' : 'brightness(0) invert(1)' }} />
             <span className={`text-xl font-bold tracking-tight ${isScrolled ? 'text-blue-900' : 'text-white'}`}>
               ESQUADROMIL
             </span>
@@ -379,7 +379,7 @@ export default function Landing() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-12 border-b border-slate-800 pb-12">
             <div className="flex flex-col gap-4">
               <div className="flex items-center gap-2">
-                <img src={logoEsquadromil} alt="Esquadromil" className="h-8 w-8 object-contain" />
+                <img src={logoEsquadromil} alt="Esquadromil" className="h-8 w-8 object-contain brightness-0 invert" />
                 <span className="text-xl font-bold tracking-tight">ESQUADROMIL</span>
               </div>
               <p className="text-slate-400 text-sm leading-relaxed max-w-xs">
