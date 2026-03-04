@@ -27,7 +27,7 @@ async function fetchAppointmentsWithProfiles(query: any) {
   if (error) throw error;
   if (!appointments || appointments.length === 0) return [];
 
-  const userIds = [...new Set(appointments.map((a: any) => a.user_id))];
+  const userIds = [...new Set(appointments.map((a: any) => a.user_id))] as string[];
   const { data: profiles } = await supabase
     .from('profiles')
     .select('id, full_name, sector')
