@@ -379,7 +379,7 @@ export default function Landing() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-12 border-b border-slate-800 pb-12">
             <div className="flex flex-col gap-4">
               <div className="flex items-center gap-2">
-                <img src={logoEsquadromil} alt="Esquadromil" className="h-8 w-8 object-contain" />
+                <img src={logoEsquadromil} alt="Esquadromil" className="h-8 w-8 object-contain brightness-0 invert" />
                 <span className="text-xl font-bold tracking-tight">ESQUADROMIL</span>
               </div>
               <p className="text-slate-400 text-sm leading-relaxed max-w-xs">
