@@ -122,6 +122,7 @@ export type Database = {
           status: string
           updated_at: string
           user_id: string
+          vehicle_plate: string | null
           visitor_document: string | null
           visitor_name: string
         }
@@ -140,6 +141,7 @@ export type Database = {
           status?: string
           updated_at?: string
           user_id: string
+          vehicle_plate?: string | null
           visitor_document?: string | null
           visitor_name: string
         }
@@ -158,6 +160,7 @@ export type Database = {
           status?: string
           updated_at?: string
           user_id?: string
+          vehicle_plate?: string | null
           visitor_document?: string | null
           visitor_name?: string
         }
