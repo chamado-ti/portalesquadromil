@@ -76,17 +76,18 @@ export default function ColaboradorAssistentePage() {
   return (
     <DashboardLayout>
       <div className="animate-fade-in flex h-[calc(100vh-8rem)] flex-col">
-        <Card className="card-institutional flex flex-1 flex-col overflow-hidden">
-          <CardHeader className="flex-shrink-0 border-b">
+        <Card className="flex flex-1 flex-col overflow-hidden border-none shadow-sm">
+          <CardHeader className="flex-shrink-0 border-b bg-card">
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2">
-                <Bot className="h-5 w-5 text-primary" />
+                <div className="rounded-lg bg-primary/10 p-1.5">
+                  <Bot className="h-5 w-5 text-primary" />
+                </div>
                 Assistente IA
               </CardTitle>
               {messages.length > 0 && (
                 <Button variant="ghost" size="sm" onClick={clearMessages}>
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Limpar conversa
+                  <Trash2 className="mr-2 h-4 w-4" /> Limpar
                 </Button>
               )}
             </div>
@@ -96,34 +97,30 @@ export default function ColaboradorAssistentePage() {
             <ScrollArea className="flex-1 p-4" ref={scrollRef}>
               {messages.length === 0 ? (
                 <div className="flex h-full flex-col items-center justify-center py-12 text-center">
-                  <div className="mb-4 rounded-full bg-primary/10 p-4">
+                  <div className="mb-4 rounded-2xl bg-primary/10 p-5">
                     <Bot className="h-12 w-12 text-primary" />
                   </div>
-                  <h3 className="mb-2 text-lg font-medium">Olá! Sou o Assistente TI</h3>
+                  <h3 className="mb-2 text-lg font-semibold">Olá! Sou o Assistente TI</h3>
                   <p className="max-w-md text-muted-foreground">
                     Posso ajudar com problemas técnicos, dúvidas sobre sistemas e equipamentos.
-                    Se necessário, posso criar um chamado automaticamente.
+                    Se não conseguir resolver, posso abrir um chamado automaticamente para o TI.
                   </p>
+                  <div className="mt-6 flex flex-wrap justify-center gap-2">
+                    {['Meu PC está lento', 'Impressora não funciona', 'Sem acesso ao email'].map(q => (
+                      <Button key={q} variant="outline" size="sm" onClick={() => { setInputValue(q); }}>
+                        {q}
+                      </Button>
+                    ))}
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-4">
                   {messages.map((message) => (
-                    <div
-                      key={message.id}
-                      className={`flex gap-3 ${message.role === 'user' ? 'flex-row-reverse' : ''}`}
-                    >
-                      <div
-                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
-                          message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'
-                        }`}
-                      >
+                    <div key={message.id} className={`flex gap-3 ${message.role === 'user' ? 'flex-row-reverse' : ''}`}>
+                      <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
                         {message.role === 'user' ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
                       </div>
-                      <div
-                        className={`max-w-[80%] rounded-lg p-3 ${
-                          message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'
-                        }`}
-                      >
+                      <div className={`max-w-[80%] rounded-xl p-3 ${message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
                         {message.role === 'assistant' ? (
                           <div className="prose prose-sm dark:prose-invert max-w-none text-sm">
                             <ReactMarkdown>{message.content}</ReactMarkdown>
@@ -138,8 +135,7 @@ export default function ColaboradorAssistentePage() {
                         {message.ticketSuggestion && (
                           <div className="mt-3 flex gap-2 border-t pt-3">
                             <Button size="sm" variant="secondary" onClick={() => handleAutoCreateTicket(message.ticketSuggestion)}>
-                              <Ticket className="mr-2 h-4 w-4" />
-                              Abrir chamado automático
+                              <Ticket className="mr-2 h-4 w-4" /> Abrir chamado
                             </Button>
                             <Button size="sm" variant="outline" onClick={() => handleOpenTicketDialog(message.ticketSuggestion)}>
                               Personalizar
@@ -155,10 +151,13 @@ export default function ColaboradorAssistentePage() {
                       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted">
                         <Bot className="h-4 w-4" />
                       </div>
-                      <div className="rounded-lg bg-muted p-3">
+                      <div className="rounded-xl bg-muted p-3">
                         <div className="flex items-center gap-2">
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          <span className="text-sm text-muted-foreground">Digitando...</span>
+                          <div className="flex gap-1">
+                            <span className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground/40" style={{ animationDelay: '0ms' }} />
+                            <span className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground/40" style={{ animationDelay: '150ms' }} />
+                            <span className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground/40" style={{ animationDelay: '300ms' }} />
+                          </div>
                         </div>
                       </div>
                     </div>

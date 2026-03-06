@@ -7,7 +7,6 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import React, { Suspense } from "react";
-import { LoadingPage } from "@/components/ui/LoadingSpinner";
 
 // Public pages (keep eager)
 import Landing from "./pages/Landing";
@@ -37,15 +36,16 @@ const queryClient = new QueryClient({
     queries: {
       retry: 1,
       refetchOnWindowFocus: false,
-      staleTime: 1000 * 60 * 2, // 2 min stale time for snappier nav
+      staleTime: 1000 * 60 * 2,
     },
   },
 });
 
-const SuspenseWrapper = ({ children }: { children: React.ReactNode }) => (
-  <Suspense fallback={<LoadingPage message="Carregando..." />}>
-    {children}
-  </Suspense>
+// Minimal inline fallback - no full-page loading screen
+const InlineFallback = () => (
+  <div className="flex h-full min-h-[200px] items-center justify-center">
+    <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+  </div>
 );
 
 const App = () => (
@@ -56,34 +56,36 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <AuthProvider>
-            <Routes>
-              {/* Public routes */}
-              <Route path="/" element={<Landing />} />
-              <Route path="/login" element={<Login />} />
+            <Suspense fallback={<InlineFallback />}>
+              <Routes>
+                {/* Public routes */}
+                <Route path="/" element={<Landing />} />
+                <Route path="/login" element={<Login />} />
 
-              {/* TI routes */}
-              <Route path="/ti" element={<ProtectedRoute allowedRoles={['ti']}><SuspenseWrapper><TIDashboard /></SuspenseWrapper></ProtectedRoute>} />
-              <Route path="/ti/usuarios" element={<ProtectedRoute allowedRoles={['ti']}><SuspenseWrapper><TIUsuariosPage /></SuspenseWrapper></ProtectedRoute>} />
-              <Route path="/ti/chamados" element={<ProtectedRoute allowedRoles={['ti']}><SuspenseWrapper><TIChamadosPage /></SuspenseWrapper></ProtectedRoute>} />
-              <Route path="/ti/agendamentos" element={<ProtectedRoute allowedRoles={['ti']}><SuspenseWrapper><TIAgendamentosPage /></SuspenseWrapper></ProtectedRoute>} />
-              <Route path="/ti/logs" element={<ProtectedRoute allowedRoles={['ti']}><SuspenseWrapper><TILogsPage /></SuspenseWrapper></ProtectedRoute>} />
-              <Route path="/ti/configuracoes" element={<ProtectedRoute allowedRoles={['ti']}><SuspenseWrapper><TIConfiguracoesPage /></SuspenseWrapper></ProtectedRoute>} />
-              <Route path="/ti/relatorios" element={<ProtectedRoute allowedRoles={['ti']}><SuspenseWrapper><TIRelatoriosPage /></SuspenseWrapper></ProtectedRoute>} />
+                {/* TI routes */}
+                <Route path="/ti" element={<ProtectedRoute allowedRoles={['ti']}><TIDashboard /></ProtectedRoute>} />
+                <Route path="/ti/usuarios" element={<ProtectedRoute allowedRoles={['ti']}><TIUsuariosPage /></ProtectedRoute>} />
+                <Route path="/ti/chamados" element={<ProtectedRoute allowedRoles={['ti']}><TIChamadosPage /></ProtectedRoute>} />
+                <Route path="/ti/agendamentos" element={<ProtectedRoute allowedRoles={['ti']}><TIAgendamentosPage /></ProtectedRoute>} />
+                <Route path="/ti/logs" element={<ProtectedRoute allowedRoles={['ti']}><TILogsPage /></ProtectedRoute>} />
+                <Route path="/ti/configuracoes" element={<ProtectedRoute allowedRoles={['ti']}><TIConfiguracoesPage /></ProtectedRoute>} />
+                <Route path="/ti/relatorios" element={<ProtectedRoute allowedRoles={['ti']}><TIRelatoriosPage /></ProtectedRoute>} />
 
-              {/* Guarita routes */}
-              <Route path="/guarita" element={<ProtectedRoute allowedRoles={['guarita']}><SuspenseWrapper><GuaritaDashboard /></SuspenseWrapper></ProtectedRoute>} />
-              <Route path="/guarita/qrcode" element={<ProtectedRoute allowedRoles={['guarita']}><SuspenseWrapper><GuaritaQRCodePage /></SuspenseWrapper></ProtectedRoute>} />
-              <Route path="/guarita/historico" element={<ProtectedRoute allowedRoles={['guarita']}><SuspenseWrapper><GuaritaHistoricoPage /></SuspenseWrapper></ProtectedRoute>} />
+                {/* Guarita routes */}
+                <Route path="/guarita" element={<ProtectedRoute allowedRoles={['guarita']}><GuaritaDashboard /></ProtectedRoute>} />
+                <Route path="/guarita/qrcode" element={<ProtectedRoute allowedRoles={['guarita']}><GuaritaQRCodePage /></ProtectedRoute>} />
+                <Route path="/guarita/historico" element={<ProtectedRoute allowedRoles={['guarita']}><GuaritaHistoricoPage /></ProtectedRoute>} />
 
-              {/* Colaborador routes */}
-              <Route path="/colaborador" element={<ProtectedRoute allowedRoles={['colaborador']}><SuspenseWrapper><ColaboradorDashboard /></SuspenseWrapper></ProtectedRoute>} />
-              <Route path="/colaborador/assistente" element={<ProtectedRoute allowedRoles={['colaborador']}><SuspenseWrapper><ColaboradorAssistentePage /></SuspenseWrapper></ProtectedRoute>} />
-              <Route path="/colaborador/chamados" element={<ProtectedRoute allowedRoles={['colaborador']}><SuspenseWrapper><ColaboradorChamadosPage /></SuspenseWrapper></ProtectedRoute>} />
-              <Route path="/colaborador/agendamentos" element={<ProtectedRoute allowedRoles={['colaborador']}><SuspenseWrapper><ColaboradorAgendamentosPage /></SuspenseWrapper></ProtectedRoute>} />
+                {/* Colaborador routes */}
+                <Route path="/colaborador" element={<ProtectedRoute allowedRoles={['colaborador']}><ColaboradorDashboard /></ProtectedRoute>} />
+                <Route path="/colaborador/assistente" element={<ProtectedRoute allowedRoles={['colaborador']}><ColaboradorAssistentePage /></ProtectedRoute>} />
+                <Route path="/colaborador/chamados" element={<ProtectedRoute allowedRoles={['colaborador']}><ColaboradorChamadosPage /></ProtectedRoute>} />
+                <Route path="/colaborador/agendamentos" element={<ProtectedRoute allowedRoles={['colaborador']}><ColaboradorAgendamentosPage /></ProtectedRoute>} />
 
-              {/* Catch-all */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+                {/* Catch-all */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Suspense>
           </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>
