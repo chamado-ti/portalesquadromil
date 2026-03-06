@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useEffect } from "react";
 
 export interface TicketStatus {
   id: string;
@@ -47,6 +48,7 @@ export interface Ticket {
   created_at: string;
   updated_at: string;
   closed_at: string | null;
+  attachments: string[] | null;
   creator?: {
     full_name: string;
     email: string;
@@ -66,49 +68,33 @@ export function useTickets() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Fetch statuses
   const statusesQuery = useQuery({
     queryKey: ["ticket-statuses"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("ticket_statuses")
-        .select("*")
-        .order("sort_order");
-
+      const { data, error } = await supabase.from("ticket_statuses").select("*").order("sort_order");
       if (error) throw error;
       return data as TicketStatus[];
     },
   });
 
-  // Fetch urgencies
   const urgenciesQuery = useQuery({
     queryKey: ["ticket-urgencies"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("ticket_urgencies")
-        .select("*")
-        .order("sort_order");
-
+      const { data, error } = await supabase.from("ticket_urgencies").select("*").order("sort_order");
       if (error) throw error;
       return data as TicketUrgency[];
     },
   });
 
-  // Fetch categories
   const categoriesQuery = useQuery({
     queryKey: ["ticket-categories"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("ticket_categories")
-        .select("*")
-        .order("name");
-
+      const { data, error } = await supabase.from("ticket_categories").select("*").order("name");
       if (error) throw error;
       return data as TicketCategory[];
     },
   });
 
-  // Fetch tickets with related data
   const ticketsQuery = useQuery({
     queryKey: ["tickets"],
     queryFn: async () => {
@@ -116,10 +102,8 @@ export function useTickets() {
         .from("tickets")
         .select("*")
         .order("created_at", { ascending: false });
-
       if (ticketsError) throw ticketsError;
 
-      // Fetch related data
       const userIds = new Set<string>();
       tickets.forEach((t) => {
         userIds.add(t.created_by);
@@ -133,21 +117,26 @@ export function useTickets() {
 
       const profileMap = new Map(profiles?.map((p) => [p.id, p]));
 
-      // Fetch messages for all tickets
       const { data: messages } = await supabase
         .from("ticket_messages")
         .select("*")
-        .in(
-          "ticket_id",
-          tickets.map((t) => t.id)
-        )
+        .in("ticket_id", tickets.map((t) => t.id))
         .order("created_at");
+
+      // Fetch message sender profiles
+      const msgSenderIds = new Set<string>();
+      (messages || []).forEach(m => msgSenderIds.add(m.sender_id));
+      const { data: msgProfiles } = await supabase
+        .from("profiles")
+        .select("id, full_name, email")
+        .in("id", Array.from(msgSenderIds));
+      const msgProfileMap = new Map(msgProfiles?.map(p => [p.id, p]));
 
       const messagesByTicket = (messages || []).reduce((acc, msg) => {
         if (!acc[msg.ticket_id]) acc[msg.ticket_id] = [];
         acc[msg.ticket_id].push({
           ...msg,
-          sender: profileMap.get(msg.sender_id),
+          sender: msgProfileMap.get(msg.sender_id),
         });
         return acc;
       }, {} as Record<string, TicketMessage[]>);
@@ -155,77 +144,56 @@ export function useTickets() {
       return tickets.map((ticket) => ({
         ...ticket,
         creator: profileMap.get(ticket.created_by),
-        assignee: ticket.assigned_to
-          ? profileMap.get(ticket.assigned_to)
-          : undefined,
+        assignee: ticket.assigned_to ? profileMap.get(ticket.assigned_to) : undefined,
         messages: messagesByTicket[ticket.id] || [],
       })) as Ticket[];
     },
   });
 
-  // Update ticket status
-  const updateStatusMutation = useMutation({
-    mutationFn: async ({
-      ticketId,
-      statusId,
-    }: {
-      ticketId: string;
-      statusId: string;
-    }) => {
-      const { error } = await supabase
-        .from("tickets")
-        .update({ status_id: statusId })
-        .eq("id", ticketId);
+  // Realtime: tickets and messages
+  useEffect(() => {
+    const channel = supabase
+      .channel('ti-tickets-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['tickets'] });
+      })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'ticket_messages' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['tickets'] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [queryClient]);
 
+  const updateStatusMutation = useMutation({
+    mutationFn: async ({ ticketId, statusId }: { ticketId: string; statusId: string }) => {
+      const { error } = await supabase.from("tickets").update({ status_id: statusId }).eq("id", ticketId);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tickets"] });
     },
     onError: () => {
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "Não foi possível atualizar o status.",
-      });
+      toast({ variant: "destructive", title: "Erro", description: "Não foi possível atualizar o status." });
     },
   });
 
-  // Add message
   const addMessageMutation = useMutation({
-    mutationFn: async ({
-      ticketId,
-      message,
-    }: {
-      ticketId: string;
-      message: string;
-    }) => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+    mutationFn: async ({ ticketId, message }: { ticketId: string; message: string }) => {
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
-
       const { error } = await supabase.from("ticket_messages").insert({
         ticket_id: ticketId,
         sender_id: user.id,
         message,
       });
-
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tickets"] });
-      toast({
-        title: "Mensagem enviada",
-        description: "Sua mensagem foi adicionada ao chamado.",
-      });
+      toast({ title: "Mensagem enviada" });
     },
     onError: () => {
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "Não foi possível enviar a mensagem.",
-      });
+      toast({ variant: "destructive", title: "Erro", description: "Não foi possível enviar a mensagem." });
     },
   });
 
@@ -234,20 +202,15 @@ export function useTickets() {
     statuses: statusesQuery.data ?? [],
     urgencies: urgenciesQuery.data ?? [],
     categories: categoriesQuery.data ?? [],
-    isLoading:
-      ticketsQuery.isLoading ||
-      statusesQuery.isLoading ||
-      urgenciesQuery.isLoading,
+    isLoading: ticketsQuery.isLoading || statusesQuery.isLoading || urgenciesQuery.isLoading,
     error: ticketsQuery.error || statusesQuery.error || urgenciesQuery.error,
     refetch: () => {
       ticketsQuery.refetch();
       statusesQuery.refetch();
       urgenciesQuery.refetch();
     },
-    updateTicketStatus: (ticketId: string, statusId: string) =>
-      updateStatusMutation.mutateAsync({ ticketId, statusId }),
-    addMessage: (ticketId: string, message: string) =>
-      addMessageMutation.mutateAsync({ ticketId, message }),
+    updateTicketStatus: (ticketId: string, statusId: string) => updateStatusMutation.mutateAsync({ ticketId, statusId }),
+    addMessage: (ticketId: string, message: string) => addMessageMutation.mutateAsync({ ticketId, message }),
     isUpdating: updateStatusMutation.isPending,
     isSendingMessage: addMessageMutation.isPending,
   };

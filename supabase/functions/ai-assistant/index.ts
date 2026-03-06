@@ -9,7 +9,7 @@ const corsHeaders = {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders });
   }
 
   try {
@@ -38,6 +38,39 @@ Deno.serve(async (req) => {
     }
 
     const { messages, autoCreateTicket } = await req.json();
+
+    // If autoCreateTicket is requested, create the ticket and return
+    if (autoCreateTicket) {
+      try {
+        const { data: statuses } = await supabase
+          .from("ticket_statuses")
+          .select("id")
+          .order("sort_order")
+          .limit(1);
+
+        const statusId = statuses?.[0]?.id;
+        if (statusId) {
+          await supabase.from("tickets").insert({
+            title: autoCreateTicket.titulo,
+            description: autoCreateTicket.descricao,
+            created_by: user.id,
+            status_id: statusId,
+          });
+
+          // Auto-add a system message
+          return new Response(
+            JSON.stringify({ message: "Chamado criado com sucesso! O time de TI foi notificado e irá resolver sua solicitação." }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+      } catch (ticketErr) {
+        console.error("Error auto-creating ticket:", ticketErr);
+      }
+      return new Response(
+        JSON.stringify({ message: "Erro ao criar chamado." }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     // Fetch knowledge base using service role to bypass RLS
     const adminClient = createClient(supabaseUrl, serviceKey);
@@ -85,8 +118,7 @@ Só inclua o JSON quando realmente for necessário abrir um chamado.${knowledgeC
       );
     }
 
-    console.log("Calling Lovable AI Gateway...");
-
+    // Streaming response
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -101,6 +133,7 @@ Só inclua o JSON quando realmente for necessário abrir um chamado.${knowledgeC
         ],
         temperature: 0.7,
         max_tokens: 1024,
+        stream: true,
       }),
     });
 
@@ -127,37 +160,10 @@ Só inclua o JSON quando realmente for necessário abrir um chamado.${knowledgeC
       );
     }
 
-    const aiResponse = await response.json();
-    const assistantMessage = aiResponse.choices?.[0]?.message?.content || "Desculpe, não consegui processar sua mensagem.";
-
-    // If autoCreateTicket is requested, create the ticket automatically
-    if (autoCreateTicket) {
-      try {
-        const { data: statuses } = await supabase
-          .from("ticket_statuses")
-          .select("id")
-          .order("sort_order")
-          .limit(1);
-
-        const statusId = statuses?.[0]?.id;
-        if (statusId) {
-          await supabase.from("tickets").insert({
-            title: autoCreateTicket.titulo,
-            description: autoCreateTicket.descricao,
-            created_by: user.id,
-            status_id: statusId,
-          });
-          console.log("Auto-created ticket:", autoCreateTicket.titulo);
-        }
-      } catch (ticketErr) {
-        console.error("Error auto-creating ticket:", ticketErr);
-      }
-    }
-
-    return new Response(
-      JSON.stringify({ message: assistantMessage }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    // Return the stream directly
+    return new Response(response.body, {
+      headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+    });
   } catch (error) {
     console.error("Error:", error);
     return new Response(

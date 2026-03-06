@@ -14,6 +14,8 @@ export interface ChatMessage {
   };
 }
 
+const STREAM_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-assistant`;
+
 export function useAIAssistant() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -46,14 +48,32 @@ export function useAIAssistant() {
     if (!suggestion) return;
     
     try {
-      const { data, error } = await supabase.functions.invoke('ai-assistant', {
-        body: { 
-          messages: [{ role: 'user', content: 'Criar chamado automaticamente' }],
-          autoCreateTicket: suggestion 
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const resp = await fetch(STREAM_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+          'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
         },
+        body: JSON.stringify({
+          messages: [{ role: 'user', content: 'Criar chamado automaticamente' }],
+          autoCreateTicket: suggestion,
+        }),
       });
-      
-      if (!error) {
+
+      if (resp.ok) {
+        const data = await resp.json();
+        // Add confirmation message
+        const confirmMsg: ChatMessage = {
+          id: crypto.randomUUID(),
+          role: 'assistant',
+          content: data.message || 'Chamado criado com sucesso! O TI irá resolver sua solicitação.',
+          timestamp: new Date(),
+        };
+        setMessages(prev => [...prev, confirmMsg]);
         queryClient.invalidateQueries({ queryKey: ['colaborador-tickets'] });
         queryClient.invalidateQueries({ queryKey: ['tickets'] });
       }
@@ -74,35 +94,109 @@ export function useAIAssistant() {
     setIsLoading(true);
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Não autenticado');
+
       const messagesForAPI = [...messages, userChatMessage].map(m => ({
         role: m.role,
         content: m.content,
       }));
 
-      const { data, error } = await supabase.functions.invoke('ai-assistant', {
-        body: { messages: messagesForAPI },
+      const resp = await fetch(STREAM_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+          'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        },
+        body: JSON.stringify({ messages: messagesForAPI }),
       });
 
-      if (error) throw error;
+      if (!resp.ok) {
+        const errData = await resp.json().catch(() => ({}));
+        throw new Error(errData.error || 'Erro ao conectar com a IA');
+      }
 
-      const ticketSuggestion = parseTicketSuggestion(data.message);
-      const cleanContent = cleanMessageContent(data.message);
+      if (!resp.body) throw new Error('No response body');
 
-      const assistantMessage: ChatMessage = {
-        id: crypto.randomUUID(),
-        role: 'assistant',
-        content: cleanContent,
-        timestamp: new Date(),
-        ticketSuggestion,
-      };
+      // Stream SSE
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let assistantSoFar = '';
+      let textBuffer = '';
+      const assistantId = crypto.randomUUID();
 
-      setMessages(prev => [...prev, assistantMessage]);
-    } catch (error) {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        textBuffer += decoder.decode(value, { stream: true });
+
+        let newlineIndex: number;
+        while ((newlineIndex = textBuffer.indexOf('\n')) !== -1) {
+          let line = textBuffer.slice(0, newlineIndex);
+          textBuffer = textBuffer.slice(newlineIndex + 1);
+
+          if (line.endsWith('\r')) line = line.slice(0, -1);
+          if (line.startsWith(':') || line.trim() === '') continue;
+          if (!line.startsWith('data: ')) continue;
+
+          const jsonStr = line.slice(6).trim();
+          if (jsonStr === '[DONE]') break;
+
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+            if (content) {
+              assistantSoFar += content;
+              setMessages(prev => {
+                const last = prev[prev.length - 1];
+                if (last?.id === assistantId) {
+                  return prev.map((m, i) => i === prev.length - 1 ? { ...m, content: assistantSoFar } : m);
+                }
+                return [...prev, { id: assistantId, role: 'assistant' as const, content: assistantSoFar, timestamp: new Date() }];
+              });
+            }
+          } catch {
+            textBuffer = line + '\n' + textBuffer;
+            break;
+          }
+        }
+      }
+
+      // Final flush
+      if (textBuffer.trim()) {
+        for (let raw of textBuffer.split('\n')) {
+          if (!raw) continue;
+          if (raw.endsWith('\r')) raw = raw.slice(0, -1);
+          if (!raw.startsWith('data: ')) continue;
+          const jsonStr = raw.slice(6).trim();
+          if (jsonStr === '[DONE]') continue;
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+            if (content) assistantSoFar += content;
+          } catch {}
+        }
+      }
+
+      // Parse ticket suggestion from final content
+      const ticketSuggestion = parseTicketSuggestion(assistantSoFar);
+      const cleanContent = cleanMessageContent(assistantSoFar);
+
+      // Update final message with clean content and ticket suggestion
+      setMessages(prev =>
+        prev.map(m =>
+          m.id === assistantId
+            ? { ...m, content: cleanContent || assistantSoFar, ticketSuggestion }
+            : m
+        )
+      );
+    } catch (error: any) {
       console.error('Error sending message:', error);
       const errorMessage: ChatMessage = {
         id: crypto.randomUUID(),
         role: 'assistant',
-        content: 'Desculpe, ocorreu um erro ao processar sua mensagem. Tente novamente.',
+        content: error.message || 'Desculpe, ocorreu um erro ao processar sua mensagem. Tente novamente.',
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, errorMessage]);

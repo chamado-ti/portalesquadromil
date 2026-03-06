@@ -20,6 +20,7 @@ export interface Appointment {
   user_id: string;
   created_at: string;
   updated_at: string;
+  vehicle_plate?: string | null;
 }
 
 export function useColaboradorAppointments() {
@@ -27,26 +28,22 @@ export function useColaboradorAppointments() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Fetch user's appointments
   const appointmentsQuery = useQuery({
     queryKey: ['colaborador-appointments', user?.id],
     queryFn: async () => {
       if (!user?.id) return [];
-
       const { data, error } = await supabase
         .from('appointments')
         .select('*')
         .eq('user_id', user.id)
         .order('scheduled_date', { ascending: false })
         .order('scheduled_time', { ascending: false });
-
       if (error) throw error;
       return data as Appointment[];
     },
     enabled: !!user?.id,
   });
 
-  // Create appointment mutation
   const createAppointmentMutation = useMutation({
     mutationFn: async (data: {
       visitor_name: string;
@@ -56,49 +53,44 @@ export function useColaboradorAppointments() {
       scheduled_time: string;
       duration_minutes: number;
       notes?: string;
+      vehicle_plate?: string;
     }) => {
       if (!user?.id) throw new Error('Usuário não autenticado');
-
-      // Generate QR code
       const qrCode = crypto.randomUUID();
-      
-      // Set expiration (scheduled date + time + duration)
       const scheduledDateTime = new Date(`${data.scheduled_date}T${data.scheduled_time}`);
       const expiresAt = new Date(scheduledDateTime);
-      expiresAt.setMinutes(expiresAt.getMinutes() + data.duration_minutes + 30); // 30 min grace period
+      expiresAt.setMinutes(expiresAt.getMinutes() + data.duration_minutes + 30);
 
       const { data: appointment, error } = await supabase
         .from('appointments')
         .insert({
-          ...data,
+          visitor_name: data.visitor_name,
+          visitor_document: data.visitor_document,
+          purpose: data.purpose,
+          scheduled_date: data.scheduled_date,
+          scheduled_time: data.scheduled_time,
+          duration_minutes: data.duration_minutes,
+          notes: data.notes,
+          vehicle_plate: data.vehicle_plate,
           user_id: user.id,
           qr_code: qrCode,
           qr_expires_at: expiresAt.toISOString(),
           status: 'pending',
-        })
+        } as any)
         .select()
         .single();
-
       if (error) throw error;
       return appointment;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['colaborador-appointments'] });
-      toast({
-        title: 'Agendamento criado',
-        description: 'O agendamento foi registrado com sucesso.',
-      });
+      toast({ title: 'Agendamento criado', description: 'O agendamento foi registrado com sucesso.' });
     },
     onError: (error) => {
-      toast({
-        title: 'Erro ao criar agendamento',
-        description: error.message,
-        variant: 'destructive',
-      });
+      toast({ title: 'Erro ao criar agendamento', description: error.message, variant: 'destructive' });
     },
   });
 
-  // Cancel appointment mutation
   const cancelAppointmentMutation = useMutation({
     mutationFn: async (appointmentId: string) => {
       const { error } = await supabase
@@ -106,22 +98,14 @@ export function useColaboradorAppointments() {
         .update({ status: 'cancelled' })
         .eq('id', appointmentId)
         .eq('user_id', user?.id);
-
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['colaborador-appointments'] });
-      toast({
-        title: 'Agendamento cancelado',
-        description: 'O agendamento foi cancelado com sucesso.',
-      });
+      toast({ title: 'Agendamento cancelado' });
     },
     onError: (error) => {
-      toast({
-        title: 'Erro ao cancelar agendamento',
-        description: error.message,
-        variant: 'destructive',
-      });
+      toast({ title: 'Erro ao cancelar', description: error.message, variant: 'destructive' });
     },
   });
 
