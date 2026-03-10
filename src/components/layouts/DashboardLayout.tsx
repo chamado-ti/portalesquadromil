@@ -46,6 +46,7 @@ const navItems: NavItem[] = [
   { label: 'Agendamentos', href: '/ti/agendamentos', icon: Calendar, roles: ['ti'] },
   { label: 'Logs', href: '/ti/logs', icon: FileText, roles: ['ti'] },
   { label: 'Relatórios', href: '/ti/relatorios', icon: BarChart3, roles: ['ti'] },
+  { label: 'Assistente IA', href: '/ti/assistente', icon: Bot, roles: ['ti'] },
   { label: 'Configurações', href: '/ti/configuracoes', icon: Settings, roles: ['ti'] },
 
   // Guarita routes
