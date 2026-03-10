@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { DashboardLayout } from '@/components/layouts/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,10 +12,11 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { useColaboradorAppointments, Appointment } from '@/hooks/useColaboradorAppointments';
 import QRCode from 'react-qr-code';
 import {
-  Plus, Calendar, Clock, QrCode, User, X, Loader2, CheckCircle, XCircle, AlertCircle, Truck,
+  Plus, Calendar, Clock, QrCode, User, X, Loader2, CheckCircle, XCircle, AlertCircle, Truck, Download,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -60,6 +61,27 @@ export default function ColaboradorAgendamentosPage() {
     } catch {}
   };
 
+  const handleDownloadQR = useCallback(() => {
+    const svg = document.getElementById('qr-code-svg');
+    if (!svg) return;
+    const svgData = new XMLSerializer().serializeToString(svg);
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+    img.onload = () => {
+      canvas.width = 400;
+      canvas.height = 400;
+      ctx!.fillStyle = '#ffffff';
+      ctx!.fillRect(0, 0, 400, 400);
+      ctx!.drawImage(img, 50, 50, 300, 300);
+      const link = document.createElement('a');
+      link.download = `qrcode-${selectedAppointment?.visitor_name || 'visita'}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    };
+    img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
+  }, [selectedAppointment]);
+
   const getStatusBadge = (status: string, entry_at: string | null, exit_at: string | null) => {
     if (status === 'cancelled') return <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20"><XCircle className="mr-1 h-3 w-3" />Cancelado</Badge>;
     if (exit_at) return <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20"><CheckCircle className="mr-1 h-3 w-3" />Concluído</Badge>;
@@ -90,54 +112,55 @@ export default function ColaboradorAgendamentosPage() {
             <DialogTrigger asChild>
               <Button><Plus className="mr-2 h-4 w-4" />Novo Agendamento</Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md">
+            <DialogContent className="max-w-md max-h-[85vh]">
               <DialogHeader>
                 <DialogTitle>Novo Agendamento</DialogTitle>
                 <DialogDescription>Agende a visita de um terceiro ao escritório.</DialogDescription>
               </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label>Nome do Visitante *</Label>
-                  <Input placeholder="Nome completo" value={form.visitor_name} onChange={(e) => setForm(prev => ({ ...prev, visitor_name: e.target.value }))} />
-                </div>
-                <div>
-                  <Label>Motivo da Visita *</Label>
-                  <Input placeholder="Ex: Reunião comercial, Entrega de materiais" value={form.purpose} onChange={(e) => setForm(prev => ({ ...prev, purpose: e.target.value }))} />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
+              <ScrollArea className="max-h-[55vh] pr-4">
+                <div className="space-y-3">
                   <div>
-                    <Label>Data *</Label>
-                    <Input type="date" value={form.scheduled_date} onChange={(e) => setForm(prev => ({ ...prev, scheduled_date: e.target.value }))} min={new Date().toISOString().split('T')[0]} />
+                    <Label>Nome do Visitante *</Label>
+                    <Input placeholder="Nome completo" value={form.visitor_name} onChange={(e) => setForm(prev => ({ ...prev, visitor_name: e.target.value }))} />
                   </div>
                   <div>
-                    <Label>Horário *</Label>
-                    <Input type="time" value={form.scheduled_time} onChange={(e) => setForm(prev => ({ ...prev, scheduled_time: e.target.value }))} />
+                    <Label>Motivo da Visita *</Label>
+                    <Input placeholder="Ex: Reunião, Entrega" value={form.purpose} onChange={(e) => setForm(prev => ({ ...prev, purpose: e.target.value }))} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label>Data *</Label>
+                      <Input type="date" value={form.scheduled_date} onChange={(e) => setForm(prev => ({ ...prev, scheduled_date: e.target.value }))} min={new Date().toISOString().split('T')[0]} />
+                    </div>
+                    <div>
+                      <Label>Horário *</Label>
+                      <Input type="time" value={form.scheduled_time} onChange={(e) => setForm(prev => ({ ...prev, scheduled_time: e.target.value }))} />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label>Duração (min)</Label>
+                      <Input type="number" min={15} max={480} value={form.duration_minutes} onChange={(e) => setForm(prev => ({ ...prev, duration_minutes: parseInt(e.target.value) || 60 }))} />
+                    </div>
+                    <div>
+                      <Label>Placa (opcional)</Label>
+                      <Input placeholder="ABC-1234" value={form.vehicle_plate} onChange={(e) => setForm(prev => ({ ...prev, vehicle_plate: e.target.value.toUpperCase() }))} />
+                    </div>
+                  </div>
+                  <div>
+                    <Label>Documento (opcional)</Label>
+                    <Input placeholder="CPF/RG" value={form.visitor_document} onChange={(e) => setForm(prev => ({ ...prev, visitor_document: e.target.value }))} />
+                  </div>
+                  <div>
+                    <Label>Observações</Label>
+                    <Textarea placeholder="Informações adicionais..." value={form.notes} onChange={(e) => setForm(prev => ({ ...prev, notes: e.target.value }))} rows={2} />
                   </div>
                 </div>
-                <div>
-                  <Label>Duração Prevista (minutos)</Label>
-                  <Input type="number" min={15} max={480} value={form.duration_minutes} onChange={(e) => setForm(prev => ({ ...prev, duration_minutes: parseInt(e.target.value) || 60 }))} />
-                </div>
-                <div>
-                  <Label>Placa do Veículo (opcional)</Label>
-                  <div className="relative">
-                    <Truck className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input placeholder="ABC-1234" value={form.vehicle_plate} onChange={(e) => setForm(prev => ({ ...prev, vehicle_plate: e.target.value.toUpperCase() }))} className="pl-9" />
-                  </div>
-                </div>
-                <div>
-                  <Label>Documento (CPF/RG) - opcional</Label>
-                  <Input placeholder="000.000.000-00" value={form.visitor_document} onChange={(e) => setForm(prev => ({ ...prev, visitor_document: e.target.value }))} />
-                </div>
-                <div>
-                  <Label>Observações</Label>
-                  <Textarea placeholder="Informações adicionais..." value={form.notes} onChange={(e) => setForm(prev => ({ ...prev, notes: e.target.value }))} rows={2} />
-                </div>
-              </div>
+              </ScrollArea>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>Cancelar</Button>
                 <Button onClick={handleCreateAppointment} disabled={isCreating || !form.visitor_name || !form.scheduled_date || !form.scheduled_time}>
-                  {isCreating ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Criando...</> : 'Criar Agendamento'}
+                  {isCreating ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Criando...</> : 'Criar'}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -204,6 +227,7 @@ export default function ColaboradorAgendamentosPage() {
           </div>
         )}
 
+        {/* QR Code Dialog with Download */}
         <Dialog open={qrDialogOpen} onOpenChange={setQrDialogOpen}>
           <DialogContent className="max-w-sm">
             <DialogHeader>
@@ -213,7 +237,7 @@ export default function ColaboradorAgendamentosPage() {
             {selectedAppointment && (
               <div className="flex flex-col items-center gap-4 py-4">
                 <div className="rounded-lg bg-white p-4">
-                  <QRCode value={selectedAppointment.qr_code || ''} size={200} />
+                  <QRCode id="qr-code-svg" value={selectedAppointment.qr_code || ''} size={200} />
                 </div>
                 <div className="text-center">
                   <p className="font-medium">{selectedAppointment.visitor_name}</p>
@@ -221,6 +245,9 @@ export default function ColaboradorAgendamentosPage() {
                     {format(new Date(selectedAppointment.scheduled_date), "dd/MM/yyyy", { locale: ptBR })} às {selectedAppointment.scheduled_time.slice(0, 5)}
                   </p>
                 </div>
+                <Button variant="outline" onClick={handleDownloadQR} className="w-full">
+                  <Download className="mr-2 h-4 w-4" /> Baixar QR Code
+                </Button>
               </div>
             )}
           </DialogContent>
