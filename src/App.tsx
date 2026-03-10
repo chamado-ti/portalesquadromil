@@ -21,6 +21,7 @@ const TIAgendamentosPage = React.lazy(() => import("./pages/ti/TIAgendamentosPag
 const TILogsPage = React.lazy(() => import("./pages/ti/TILogsPage"));
 const TIConfiguracoesPage = React.lazy(() => import("./pages/ti/TIConfiguracoesPage"));
 const TIRelatoriosPage = React.lazy(() => import("./pages/ti/TIRelatoriosPage"));
+const TIAssistentePage = React.lazy(() => import("./pages/ti/TIAssistentePage"));
 
 const GuaritaDashboard = React.lazy(() => import("./pages/guarita/GuaritaDashboard"));
 const GuaritaQRCodePage = React.lazy(() => import("./pages/guarita/GuaritaQRCodePage"));
