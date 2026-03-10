@@ -21,6 +21,7 @@ const TIAgendamentosPage = React.lazy(() => import("./pages/ti/TIAgendamentosPag
 const TILogsPage = React.lazy(() => import("./pages/ti/TILogsPage"));
 const TIConfiguracoesPage = React.lazy(() => import("./pages/ti/TIConfiguracoesPage"));
 const TIRelatoriosPage = React.lazy(() => import("./pages/ti/TIRelatoriosPage"));
+const TIAssistentePage = React.lazy(() => import("./pages/ti/TIAssistentePage"));
 
 const GuaritaDashboard = React.lazy(() => import("./pages/guarita/GuaritaDashboard"));
 const GuaritaQRCodePage = React.lazy(() => import("./pages/guarita/GuaritaQRCodePage"));
@@ -70,6 +71,7 @@ const App = () => (
                 <Route path="/ti/logs" element={<ProtectedRoute allowedRoles={['ti']}><TILogsPage /></ProtectedRoute>} />
                 <Route path="/ti/configuracoes" element={<ProtectedRoute allowedRoles={['ti']}><TIConfiguracoesPage /></ProtectedRoute>} />
                 <Route path="/ti/relatorios" element={<ProtectedRoute allowedRoles={['ti']}><TIRelatoriosPage /></ProtectedRoute>} />
+                <Route path="/ti/assistente" element={<ProtectedRoute allowedRoles={['ti']}><TIAssistentePage /></ProtectedRoute>} />
 
                 {/* Guarita routes */}
                 <Route path="/guarita" element={<ProtectedRoute allowedRoles={['guarita']}><GuaritaDashboard /></ProtectedRoute>} />
