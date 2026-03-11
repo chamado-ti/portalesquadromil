@@ -237,6 +237,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          avatar_url: string | null
           created_at: string
           email: string
           full_name: string
@@ -248,6 +249,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          avatar_url?: string | null
           created_at?: string
           email: string
           full_name: string
@@ -259,6 +261,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          avatar_url?: string | null
           created_at?: string
           email?: string
           full_name?: string
@@ -492,6 +495,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_credentials: {
+        Row: {
+          created_at: string
+          id: string
+          service_email: string
+          service_name: string
+          service_password: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          service_email: string
+          service_name: string
+          service_password: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          service_email?: string
+          service_name?: string
+          service_password?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {
