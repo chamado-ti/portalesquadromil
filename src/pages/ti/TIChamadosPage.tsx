@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { DashboardLayout } from "@/components/layouts/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { downloadCSV, formatDateForCSV } from "@/lib/csvExport";
@@ -24,7 +24,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import {
   Search, MessageSquare, User, Calendar, Clock, Send, AlertCircle, RefreshCw,
-  Ticket as TicketIcon, Download, Plus, Trash2, Image,
+  Ticket as TicketIcon, Download, Plus, Trash2, Image, Upload,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -44,8 +44,9 @@ export default function TIChamadosPage() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [ticketToDelete, setTicketToDelete] = useState<string | null>(null);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const importRef = useRef<HTMLInputElement>(null);
 
-  // Fetch collaborators for ticket creation
   const { data: collaborators = [] } = useQuery({
     queryKey: ['profiles-colaboradores'],
     queryFn: async () => {
@@ -55,19 +56,16 @@ export default function TIChamadosPage() {
     },
   });
 
-  const [ticketForm, setTicketForm] = useState({
-    title: '', description: '', category_id: '', urgency_id: '', created_by: '',
-  });
+  const [ticketForm, setTicketForm] = useState({ title: '', description: '', category_id: '', urgency_id: '', created_by: '' });
 
   const ticketsByStatus = useMemo(() => {
-    const filtered = tickets.filter((ticket) => {
-      const matchesSearch = ticket.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (ticket.description?.toLowerCase() || "").includes(searchTerm.toLowerCase());
+    const filtered = tickets.filter(ticket => {
+      const matchesSearch = ticket.title.toLowerCase().includes(searchTerm.toLowerCase()) || (ticket.description?.toLowerCase() || "").includes(searchTerm.toLowerCase());
       const matchesUrgency = urgencyFilter === "all" || ticket.urgency_id === urgencyFilter;
       return matchesSearch && matchesUrgency;
     });
     return statuses.reduce((acc, status) => {
-      acc[status.id] = filtered.filter((t) => t.status_id === status.id);
+      acc[status.id] = filtered.filter(t => t.status_id === status.id);
       return acc;
     }, {} as Record<string, Ticket[]>);
   }, [tickets, statuses, searchTerm, urgencyFilter]);
@@ -84,6 +82,8 @@ export default function TIChamadosPage() {
     if (!selectedTicket || !newMessage.trim()) return;
     await addMessage(selectedTicket.id, newMessage.trim());
     setNewMessage("");
+    // Refresh ticket data for messages
+    refetch();
   };
 
   const handleCreateTicket = async () => {
@@ -92,25 +92,15 @@ export default function TIChamadosPage() {
       const firstStatus = statuses[0];
       if (!firstStatus) return;
       const { error } = await supabase.from('tickets').insert({
-        title: ticketForm.title,
-        description: ticketForm.description || null,
-        category_id: ticketForm.category_id || null,
-        urgency_id: ticketForm.urgency_id || null,
-        created_by: ticketForm.created_by,
-        status_id: firstStatus.id,
+        title: ticketForm.title, description: ticketForm.description || null,
+        category_id: ticketForm.category_id || null, urgency_id: ticketForm.urgency_id || null,
+        created_by: ticketForm.created_by, status_id: firstStatus.id,
       });
       if (error) throw error;
-      // Auto-add system message
       const { data: ticket } = await supabase.from('tickets').select('id').order('created_at', { ascending: false }).limit(1).single();
       if (ticket) {
         const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          await supabase.from('ticket_messages').insert({
-            ticket_id: ticket.id,
-            sender_id: user.id,
-            message: '📋 Chamado aberto pelo TI. A equipe já está ciente e trabalhará na resolução.',
-          });
-        }
+        if (user) await supabase.from('ticket_messages').insert({ ticket_id: ticket.id, sender_id: user.id, message: '📋 Chamado aberto pelo TI. A equipe já está ciente e trabalhará na resolução.' });
       }
       toast({ title: 'Chamado criado com sucesso!' });
       setCreateDialogOpen(false);
@@ -131,6 +121,43 @@ export default function TIChamadosPage() {
     } catch {}
   };
 
+  const confirmDelete = (ticketId: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setTicketToDelete(ticketId);
+    setDeleteDialogOpen(true);
+  };
+
+  // CSV import handler
+  const handleImportCSV = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const text = await file.text();
+    const lines = text.split('\n').filter(l => l.trim());
+    if (lines.length < 2) { toast({ title: 'Arquivo vazio', variant: 'destructive' }); return; }
+    // Parse CSV headers
+    const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/"/g, ''));
+    const titleIdx = headers.findIndex(h => h.includes('titulo') || h.includes('title'));
+    const descIdx = headers.findIndex(h => h.includes('descri') || h.includes('description'));
+    if (titleIdx === -1) { toast({ title: 'CSV precisa ter coluna "titulo"', variant: 'destructive' }); return; }
+
+    const firstStatus = statuses[0];
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user || !firstStatus) return;
+
+    let count = 0;
+    for (let i = 1; i < lines.length; i++) {
+      const cols = lines[i].split(',').map(c => c.trim().replace(/"/g, ''));
+      const title = cols[titleIdx];
+      if (!title) continue;
+      const description = descIdx >= 0 ? cols[descIdx] : null;
+      await supabase.from('tickets').insert({ title, description, created_by: user.id, status_id: firstStatus.id });
+      count++;
+    }
+    toast({ title: `${count} chamados importados com sucesso!` });
+    refetch();
+    setImportDialogOpen(false);
+  };
+
   const getUrgencyColor = (urgencyId: string | null) => urgencies.find(u => u.id === urgencyId)?.color || "#6b7280";
   const getUrgencyName = (urgencyId: string | null) => urgencies.find(u => u.id === urgencyId)?.name || "Não definida";
 
@@ -148,80 +175,84 @@ export default function TIChamadosPage() {
 
   return (
     <DashboardLayout>
-      <div className="animate-fade-in space-y-6">
+      <div className="space-y-4">
         <Card>
-          <CardContent className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center">
+          <CardContent className="flex flex-col gap-3 p-3 sm:flex-row sm:items-center">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input placeholder="Buscar chamados..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9" />
+              <Input placeholder="Buscar chamados..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-9" />
             </div>
             <Select value={urgencyFilter} onValueChange={setUrgencyFilter}>
-              <SelectTrigger className="w-full sm:w-48"><SelectValue placeholder="Urgência" /></SelectTrigger>
+              <SelectTrigger className="w-full sm:w-44"><SelectValue placeholder="Urgência" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todas as urgências</SelectItem>
+                <SelectItem value="all">Todas</SelectItem>
                 {urgencies.map(u => (
-                  <SelectItem key={u.id} value={u.id}>
-                    <div className="flex items-center gap-2"><div className="h-3 w-3 rounded-full" style={{ backgroundColor: u.color }} />{u.name}</div>
-                  </SelectItem>
+                  <SelectItem key={u.id} value={u.id}><div className="flex items-center gap-2"><div className="h-3 w-3 rounded-full" style={{ backgroundColor: u.color }} />{u.name}</div></SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <Button variant="outline" size="sm" onClick={() => setCreateDialogOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />Novo Chamado
-            </Button>
-            <Button variant="outline" size="sm" disabled={tickets.length === 0} onClick={() => {
-              downloadCSV(tickets.map(t => ({
-                titulo: t.title, descricao: t.description || '', solicitante: t.creator?.full_name || '',
-                setor: t.creator?.sector || '', status: statuses.find(s => s.id === t.status_id)?.name || '',
-                urgencia: urgencies.find(u => u.id === t.urgency_id)?.name || '',
-                criado_em: formatDateForCSV(t.created_at), mensagens: t.messages?.length || 0,
-              })), 'chamados', [
-                { key: 'titulo', label: 'Título' }, { key: 'solicitante', label: 'Solicitante' },
-                { key: 'setor', label: 'Setor' }, { key: 'status', label: 'Status' },
-                { key: 'urgencia', label: 'Urgência' }, { key: 'criado_em', label: 'Criado em' },
-              ]);
-            }}>
-              <Download className="mr-2 h-4 w-4" />CSV
-            </Button>
+            <div className="flex gap-2">
+              <Button size="sm" onClick={() => setCreateDialogOpen(true)}><Plus className="mr-1 h-4 w-4" />Novo</Button>
+              <Button variant="outline" size="sm" onClick={() => setImportDialogOpen(true)}><Upload className="mr-1 h-4 w-4" />Importar</Button>
+              <Button variant="outline" size="sm" disabled={tickets.length === 0} onClick={() => {
+                downloadCSV(tickets.map(t => ({
+                  titulo: t.title, descricao: t.description || '', solicitante: t.creator?.full_name || '',
+                  setor: t.creator?.sector || '', status: statuses.find(s => s.id === t.status_id)?.name || '',
+                  urgencia: urgencies.find(u => u.id === t.urgency_id)?.name || '',
+                  criado_em: formatDateForCSV(t.created_at),
+                })), 'chamados', [
+                  { key: 'titulo', label: 'Título' }, { key: 'solicitante', label: 'Solicitante' },
+                  { key: 'setor', label: 'Setor' }, { key: 'status', label: 'Status' },
+                  { key: 'urgencia', label: 'Urgência' }, { key: 'criado_em', label: 'Criado em' },
+                ]);
+              }}><Download className="mr-1 h-4 w-4" />CSV</Button>
+            </div>
           </CardContent>
         </Card>
 
         {isLoading ? (
           <div className="flex items-center justify-center py-12"><LoadingSpinner size="lg" /></div>
         ) : (
-          <div className="grid gap-4 lg:grid-cols-4">
+          <div className="grid gap-3 lg:grid-cols-4">
             {statuses.map(status => (
               <div key={status.id} className="flex flex-col" onDragOver={handleDragOver} onDrop={e => handleDrop(e, status.id)}>
-                <div className="mb-3 flex items-center justify-between rounded-t-lg border-b-4 bg-card p-3" style={{ borderBottomColor: status.color }}>
+                <div className="mb-2 flex items-center justify-between rounded-t-lg border-b-4 bg-card p-2.5" style={{ borderBottomColor: status.color }}>
                   <div className="flex items-center gap-2">
-                    <h3 className="font-semibold">{status.name}</h3>
+                    <h3 className="text-sm font-semibold">{status.name}</h3>
                     <Badge variant="secondary" className="text-xs">{ticketsByStatus[status.id]?.length || 0}</Badge>
                   </div>
                 </div>
-                <ScrollArea className="h-[calc(100vh-320px)] rounded-b-lg border bg-secondary/30 p-2">
+                <ScrollArea className="h-[calc(100vh-280px)] rounded-b-lg border bg-secondary/30 p-1.5">
                   <div className="space-y-2">
                     {!ticketsByStatus[status.id]?.length ? (
-                      <div className="flex flex-col items-center justify-center py-8 text-center">
-                        <TicketIcon className="mb-2 h-8 w-8 text-muted-foreground/30" />
-                        <p className="text-sm text-muted-foreground">Nenhum chamado</p>
+                      <div className="flex flex-col items-center justify-center py-6 text-center">
+                        <TicketIcon className="mb-2 h-6 w-6 text-muted-foreground/30" />
+                        <p className="text-xs text-muted-foreground">Vazio</p>
                       </div>
                     ) : ticketsByStatus[status.id]?.map(ticket => (
-                      <Card key={ticket.id} className="cursor-pointer transition-all hover:shadow-md" draggable
-                        onDragStart={e => handleDragStart(e, ticket.id)} onClick={() => setSelectedTicket(ticket)}>
-                        <CardContent className="p-3">
-                          <div className="mb-2 flex items-start justify-between gap-2">
-                            <h4 className="line-clamp-2 text-sm font-medium">{ticket.title}</h4>
-                            <Badge variant="outline" className="shrink-0 text-xs" style={{ borderColor: getUrgencyColor(ticket.urgency_id), color: getUrgencyColor(ticket.urgency_id) }}>
-                              {getUrgencyName(ticket.urgency_id)}
-                            </Badge>
+                      <Card key={ticket.id} className="cursor-pointer transition-all hover:shadow-md" draggable onDragStart={e => handleDragStart(e, ticket.id)} onClick={() => setSelectedTicket(ticket)}>
+                        <CardContent className="p-2.5">
+                          <div className="mb-1.5 flex items-start justify-between gap-1">
+                            <h4 className="line-clamp-2 text-xs font-medium leading-tight">{ticket.title}</h4>
+                            <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0 text-destructive/70 hover:text-destructive" onClick={e => confirmDelete(ticket.id, e)}>
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
                           </div>
-                          <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                            <div className="flex items-center gap-1"><User className="h-3 w-3" /><span className="max-w-20 truncate">{ticket.creator?.full_name?.split(" ")[0] || "—"}</span></div>
+                          <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                            <div className="flex items-center gap-1"><User className="h-3 w-3" /><span className="max-w-16 truncate">{ticket.creator?.full_name?.split(" ")[0] || "—"}</span></div>
                             <div className="flex items-center gap-1"><Calendar className="h-3 w-3" /><span>{format(new Date(ticket.created_at), "dd/MM", { locale: ptBR })}</span></div>
                             {ticket.messages && ticket.messages.length > 0 && (
                               <div className="flex items-center gap-1"><MessageSquare className="h-3 w-3" /><span>{ticket.messages.length}</span></div>
                             )}
+                            {ticket.attachments && ticket.attachments.length > 0 && (
+                              <div className="flex items-center gap-1"><Image className="h-3 w-3" /><span>{ticket.attachments.length}</span></div>
+                            )}
                           </div>
+                          {ticket.urgency_id && (
+                            <Badge variant="outline" className="mt-1.5 text-[10px]" style={{ borderColor: getUrgencyColor(ticket.urgency_id), color: getUrgencyColor(ticket.urgency_id) }}>
+                              {getUrgencyName(ticket.urgency_id)}
+                            </Badge>
+                          )}
                         </CardContent>
                       </Card>
                     ))}
@@ -247,53 +278,37 @@ export default function TIChamadosPage() {
                 </DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
-                <div className="grid gap-4 rounded-lg border bg-secondary/30 p-4 sm:grid-cols-3">
-                  <div className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-muted-foreground" />
-                    <div>
-                      <p className="text-xs text-muted-foreground">Solicitante</p>
-                      <p className="text-sm font-medium">{selectedTicket.creator?.full_name || "—"}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <div>
-                      <p className="text-xs text-muted-foreground">Criado em</p>
-                      <p className="text-sm font-medium">{format(new Date(selectedTicket.created_at), "dd/MM/yyyy", { locale: ptBR })}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-muted-foreground" />
-                    <div>
-                      <p className="text-xs text-muted-foreground">Status</p>
-                      <Select value={selectedTicket.status_id} onValueChange={v => updateTicketStatus(selectedTicket.id, v)} disabled={isUpdating}>
-                        <SelectTrigger className="h-7 w-36 text-sm"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {statuses.map(s => (
-                            <SelectItem key={s.id} value={s.id}><div className="flex items-center gap-2"><div className="h-2 w-2 rounded-full" style={{ backgroundColor: s.color }} />{s.name}</div></SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
+                <div className="grid gap-3 rounded-lg border bg-secondary/30 p-3 sm:grid-cols-3">
+                  <div className="flex items-center gap-2"><User className="h-4 w-4 text-muted-foreground" /><div><p className="text-xs text-muted-foreground">Solicitante</p><p className="text-sm font-medium">{selectedTicket.creator?.full_name || "—"}</p></div></div>
+                  <div className="flex items-center gap-2"><Calendar className="h-4 w-4 text-muted-foreground" /><div><p className="text-xs text-muted-foreground">Criado em</p><p className="text-sm font-medium">{format(new Date(selectedTicket.created_at), "dd/MM/yyyy", { locale: ptBR })}</p></div></div>
+                  <div className="flex items-center gap-2"><Clock className="h-4 w-4 text-muted-foreground" /><div><p className="text-xs text-muted-foreground">Status</p>
+                    <Select value={selectedTicket.status_id} onValueChange={v => updateTicketStatus(selectedTicket.id, v)} disabled={isUpdating}>
+                      <SelectTrigger className="h-7 w-36 text-sm"><SelectValue /></SelectTrigger>
+                      <SelectContent>{statuses.map(s => <SelectItem key={s.id} value={s.id}><div className="flex items-center gap-2"><div className="h-2 w-2 rounded-full" style={{ backgroundColor: s.color }} />{s.name}</div></SelectItem>)}</SelectContent>
+                    </Select>
+                  </div></div>
                 </div>
 
                 {selectedTicket.description && (
-                  <div>
-                    <Label className="text-muted-foreground">Descrição</Label>
-                    <p className="mt-1 rounded-lg border bg-secondary/30 p-3 text-sm">{selectedTicket.description}</p>
-                  </div>
+                  <div><Label className="text-muted-foreground">Descrição</Label><p className="mt-1 rounded-lg border bg-secondary/30 p-3 text-sm">{selectedTicket.description}</p></div>
                 )}
 
                 {selectedTicket.attachments && selectedTicket.attachments.length > 0 && (
                   <div>
                     <Label className="text-muted-foreground">Anexos</Label>
-                    <div className="mt-1 space-y-1">
-                      {selectedTicket.attachments.map((url, i) => (
-                        <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-primary hover:underline">
-                          <Image className="h-3 w-3" /> Anexo {i + 1}
-                        </a>
-                      ))}
+                    <div className="mt-1 flex flex-wrap gap-2">
+                      {selectedTicket.attachments.map((url, i) => {
+                        const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(url);
+                        return isImage ? (
+                          <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-lg border hover:opacity-80 transition-opacity">
+                            <img src={url} alt={`Anexo ${i + 1}`} className="h-20 w-20 object-cover" />
+                          </a>
+                        ) : (
+                          <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-lg border p-2 text-sm text-primary hover:underline">
+                            <Image className="h-4 w-4" /> Anexo {i + 1}
+                          </a>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -329,9 +344,7 @@ export default function TIChamadosPage() {
                 </div>
               </div>
               <DialogFooter className="gap-2">
-                <Button variant="destructive" size="sm" onClick={() => { setTicketToDelete(selectedTicket.id); setDeleteDialogOpen(true); }}>
-                  <Trash2 className="mr-2 h-4 w-4" />Excluir
-                </Button>
+                <Button variant="destructive" size="sm" onClick={() => confirmDelete(selectedTicket.id)}><Trash2 className="mr-2 h-4 w-4" />Excluir</Button>
                 <Button variant="outline" onClick={() => setSelectedTicket(null)}>Fechar</Button>
               </DialogFooter>
             </>
@@ -342,49 +355,39 @@ export default function TIChamadosPage() {
       {/* Create Ticket Dialog */}
       <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Abrir Chamado</DialogTitle>
-            <DialogDescription>Crie um chamado em nome de um colaborador.</DialogDescription>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>Abrir Chamado</DialogTitle><DialogDescription>Crie um chamado em nome de um colaborador.</DialogDescription></DialogHeader>
           <div className="space-y-4">
-            <div>
-              <Label>Colaborador *</Label>
+            <div><Label>Colaborador *</Label>
               <Select value={ticketForm.created_by} onValueChange={v => setTicketForm(p => ({ ...p, created_by: v }))}>
                 <SelectTrigger><SelectValue placeholder="Selecione o colaborador" /></SelectTrigger>
-                <SelectContent>
-                  {collaborators.map(c => <SelectItem key={c.id} value={c.id}>{c.full_name} ({c.sector || 'Sem setor'})</SelectItem>)}
-                </SelectContent>
+                <SelectContent>{collaborators.map(c => <SelectItem key={c.id} value={c.id}>{c.full_name} ({c.sector || 'Sem setor'})</SelectItem>)}</SelectContent>
               </Select>
             </div>
-            <div>
-              <Label>Título *</Label>
-              <Input placeholder="Resumo do problema" value={ticketForm.title} onChange={e => setTicketForm(p => ({ ...p, title: e.target.value }))} />
-            </div>
-            <div>
-              <Label>Descrição</Label>
-              <Textarea placeholder="Detalhes..." value={ticketForm.description} onChange={e => setTicketForm(p => ({ ...p, description: e.target.value }))} rows={3} />
-            </div>
+            <div><Label>Título *</Label><Input placeholder="Resumo do problema" value={ticketForm.title} onChange={e => setTicketForm(p => ({ ...p, title: e.target.value }))} /></div>
+            <div><Label>Descrição</Label><Textarea placeholder="Detalhes..." value={ticketForm.description} onChange={e => setTicketForm(p => ({ ...p, description: e.target.value }))} rows={3} /></div>
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Categoria</Label>
-                <Select value={ticketForm.category_id} onValueChange={v => setTicketForm(p => ({ ...p, category_id: v }))}>
-                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                  <SelectContent>{categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Prioridade</Label>
-                <Select value={ticketForm.urgency_id} onValueChange={v => setTicketForm(p => ({ ...p, urgency_id: v }))}>
-                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                  <SelectContent>{urgencies.map(u => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
+              <div><Label>Categoria</Label><Select value={ticketForm.category_id} onValueChange={v => setTicketForm(p => ({ ...p, category_id: v }))}><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger><SelectContent>{categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent></Select></div>
+              <div><Label>Prioridade</Label><Select value={ticketForm.urgency_id} onValueChange={v => setTicketForm(p => ({ ...p, urgency_id: v }))}><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger><SelectContent>{urgencies.map(u => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}</SelectContent></Select></div>
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>Cancelar</Button>
             <Button onClick={handleCreateTicket} disabled={!ticketForm.title || !ticketForm.created_by}>Criar Chamado</Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Import CSV Dialog */}
+      <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Importar Chamados</DialogTitle><DialogDescription>Importe dados de chamados antigos via CSV. O arquivo deve ter uma coluna "titulo".</DialogDescription></DialogHeader>
+          <div className="space-y-4">
+            <input ref={importRef} type="file" accept=".csv" className="hidden" onChange={handleImportCSV} />
+            <Button variant="outline" className="w-full" onClick={() => importRef.current?.click()}>
+              <Upload className="mr-2 h-4 w-4" /> Selecionar arquivo CSV
+            </Button>
+            <p className="text-xs text-muted-foreground">Colunas aceitas: titulo, descricao. Outras colunas serão ignoradas.</p>
+          </div>
         </DialogContent>
       </Dialog>
 
