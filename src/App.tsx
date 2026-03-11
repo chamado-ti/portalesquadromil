@@ -42,13 +42,6 @@ const queryClient = new QueryClient({
   },
 });
 
-// Minimal inline fallback - no full-page loading screen
-const InlineFallback = () => (
-  <div className="flex h-full min-h-[200px] items-center justify-center">
-    <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-  </div>
-);
-
 const App = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
@@ -57,13 +50,11 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <AuthProvider>
-            <Suspense fallback={<InlineFallback />}>
+            <Suspense fallback={null}>
               <Routes>
-                {/* Public routes */}
                 <Route path="/" element={<Landing />} />
                 <Route path="/login" element={<Login />} />
 
-                {/* TI routes */}
                 <Route path="/ti" element={<ProtectedRoute allowedRoles={['ti']}><TIDashboard /></ProtectedRoute>} />
                 <Route path="/ti/usuarios" element={<ProtectedRoute allowedRoles={['ti']}><TIUsuariosPage /></ProtectedRoute>} />
                 <Route path="/ti/chamados" element={<ProtectedRoute allowedRoles={['ti']}><TIChamadosPage /></ProtectedRoute>} />
@@ -73,18 +64,15 @@ const App = () => (
                 <Route path="/ti/relatorios" element={<ProtectedRoute allowedRoles={['ti']}><TIRelatoriosPage /></ProtectedRoute>} />
                 <Route path="/ti/assistente" element={<ProtectedRoute allowedRoles={['ti']}><TIAssistentePage /></ProtectedRoute>} />
 
-                {/* Guarita routes */}
                 <Route path="/guarita" element={<ProtectedRoute allowedRoles={['guarita']}><GuaritaDashboard /></ProtectedRoute>} />
                 <Route path="/guarita/qrcode" element={<ProtectedRoute allowedRoles={['guarita']}><GuaritaQRCodePage /></ProtectedRoute>} />
                 <Route path="/guarita/historico" element={<ProtectedRoute allowedRoles={['guarita']}><GuaritaHistoricoPage /></ProtectedRoute>} />
 
-                {/* Colaborador routes */}
                 <Route path="/colaborador" element={<ProtectedRoute allowedRoles={['colaborador']}><ColaboradorDashboard /></ProtectedRoute>} />
                 <Route path="/colaborador/assistente" element={<ProtectedRoute allowedRoles={['colaborador']}><ColaboradorAssistentePage /></ProtectedRoute>} />
                 <Route path="/colaborador/chamados" element={<ProtectedRoute allowedRoles={['colaborador']}><ColaboradorChamadosPage /></ProtectedRoute>} />
                 <Route path="/colaborador/agendamentos" element={<ProtectedRoute allowedRoles={['colaborador']}><ColaboradorAgendamentosPage /></ProtectedRoute>} />
 
-                {/* Catch-all */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>
