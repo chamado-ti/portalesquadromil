@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import logoFooter from '@/assets/logo-footer.png';
 import { useNavigate } from 'react-router-dom';
 import { 
   ShieldCheck, 
