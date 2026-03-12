@@ -135,6 +135,21 @@ export function useColaboradorTickets() {
         message: '📋 Chamado aberto. O time de TI foi notificado e irá resolver sua solicitação em breve.',
       });
 
+      // Notify TI users
+      const { data: tiProfiles } = await supabase.from('profiles').select('id').eq('role', 'ti' as any);
+      if (tiProfiles) {
+        for (const ti of tiProfiles) {
+          await supabase.from('notifications').insert({
+            user_id: ti.id,
+            title: 'Novo chamado aberto',
+            message: `${data.title}`,
+            type: 'ticket',
+            entity_type: 'ticket',
+            entity_id: ticket.id,
+          });
+        }
+      }
+
       return ticket;
     },
     onSuccess: () => {
