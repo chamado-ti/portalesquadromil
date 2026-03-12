@@ -147,6 +147,19 @@ export function useTickets() {
       if (!user) throw new Error("Usuário não autenticado");
       const { error } = await supabase.from("ticket_messages").insert({ ticket_id: ticketId, sender_id: user.id, message });
       if (error) throw error;
+
+      // Notify the ticket creator
+      const ticket = ticketsQuery.data?.find(t => t.id === ticketId);
+      if (ticket && ticket.created_by !== user.id) {
+        await supabase.from("notifications").insert({
+          user_id: ticket.created_by,
+          title: "Nova mensagem no chamado",
+          message: message.slice(0, 100),
+          type: "message",
+          entity_type: "ticket",
+          entity_id: ticketId,
+        });
+      }
     },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["tickets"] }); toast({ title: "Mensagem enviada" }); },
     onError: () => { toast({ variant: "destructive", title: "Erro", description: "Não foi possível enviar a mensagem." }); },
