@@ -26,6 +26,7 @@ const TIAssistentePage = React.lazy(() => import("./pages/ti/TIAssistentePage"))
 const GuaritaDashboard = React.lazy(() => import("./pages/guarita/GuaritaDashboard"));
 const GuaritaQRCodePage = React.lazy(() => import("./pages/guarita/GuaritaQRCodePage"));
 const GuaritaHistoricoPage = React.lazy(() => import("./pages/guarita/GuaritaHistoricoPage"));
+const GuaritaAgendarPage = React.lazy(() => import("./pages/guarita/GuaritaAgendarPage"));
 
 const ColaboradorDashboard = React.lazy(() => import("./pages/colaborador/ColaboradorDashboard"));
 const ColaboradorAssistentePage = React.lazy(() => import("./pages/colaborador/ColaboradorAssistentePage"));
@@ -65,6 +66,7 @@ const App = () => (
                 <Route path="/ti/assistente" element={<ProtectedRoute allowedRoles={['ti']}><TIAssistentePage /></ProtectedRoute>} />
 
                 <Route path="/guarita" element={<ProtectedRoute allowedRoles={['guarita']}><GuaritaDashboard /></ProtectedRoute>} />
+                <Route path="/guarita/agendar" element={<ProtectedRoute allowedRoles={['guarita']}><GuaritaAgendarPage /></ProtectedRoute>} />
                 <Route path="/guarita/qrcode" element={<ProtectedRoute allowedRoles={['guarita']}><GuaritaQRCodePage /></ProtectedRoute>} />
                 <Route path="/guarita/historico" element={<ProtectedRoute allowedRoles={['guarita']}><GuaritaHistoricoPage /></ProtectedRoute>} />
 

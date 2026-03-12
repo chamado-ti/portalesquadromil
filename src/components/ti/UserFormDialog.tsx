@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
@@ -10,6 +10,9 @@ import {
 } from "@/components/ui/select";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { useSectors } from "@/hooks/useSectors";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { Camera } from "lucide-react";
 import type { User, CreateUserData, UpdateUserData } from "@/hooks/useUsers";
 import type { AppRole } from "@/lib/auth";
 
@@ -30,6 +33,10 @@ const ROLES: { value: AppRole; label: string }[] = [
 export function UserFormDialog({ open, onOpenChange, user, onSubmit, isLoading }: UserFormDialogProps) {
   const isEditing = !!user;
   const { sectors } = useSectors();
+  const { toast } = useToast();
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
 
   const [formData, setFormData] = useState({
     email: "", password: "", full_name: "", sector: "", role: "colaborador" as AppRole,
@@ -39,11 +46,21 @@ export function UserFormDialog({ open, onOpenChange, user, onSubmit, isLoading }
   useEffect(() => {
     if (user) {
       setFormData({ email: user.email, password: "", full_name: user.full_name, sector: user.sector || "", role: user.role });
+      setAvatarPreview((user as any).avatar_url || null);
     } else {
       setFormData({ email: "", password: "", full_name: "", sector: "", role: "colaborador" });
+      setAvatarPreview(null);
     }
+    setAvatarFile(null);
     setErrors({});
   }, [user, open]);
+
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAvatarFile(file);
+    setAvatarPreview(URL.createObjectURL(file));
+  };
 
   const validate = () => {
     const newErrors: Record<string, string> = {};
@@ -66,14 +83,22 @@ export function UserFormDialog({ open, onOpenChange, user, onSubmit, isLoading }
     try {
       if (isEditing && user) {
         await onSubmit({ user_id: user.id, full_name: formData.full_name, sector: formData.sector, role: formData.role });
+        // Upload avatar if changed
+        if (avatarFile) {
+          const ext = avatarFile.name.split('.').pop();
+          const path = `${user.id}.${ext}`;
+          await supabase.storage.from('avatars').upload(path, avatarFile, { upsert: true });
+          const { data } = supabase.storage.from('avatars').getPublicUrl(path);
+          await supabase.from('profiles').update({ avatar_url: data.publicUrl } as any).eq('id', user.id);
+        }
       } else {
         await onSubmit({ email: formData.email, password: formData.password, full_name: formData.full_name, sector: formData.sector, role: formData.role });
+        // For new users, avatar will be uploaded after user is created via the detail dialog
       }
       onOpenChange(false);
     } catch {}
   };
 
-  // Merge DB sectors with any current value
   const sectorOptions = sectors.map(s => s.name);
   if (formData.sector && !sectorOptions.includes(formData.sector)) {
     sectorOptions.push(formData.sector);
@@ -84,9 +109,24 @@ export function UserFormDialog({ open, onOpenChange, user, onSubmit, isLoading }
       <DialogContent className="sm:max-w-md">
         <DialogHeader><DialogTitle>{isEditing ? "Editar Usuário" : "Novo Usuário"}</DialogTitle></DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Avatar */}
+          <div className="flex justify-center">
+            <div className="relative">
+              <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-2xl font-bold text-primary">
+                {avatarPreview
+                  ? <img src={avatarPreview} className="h-full w-full object-cover" />
+                  : formData.full_name?.charAt(0).toUpperCase() || '?'}
+              </div>
+              <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
+              <Button type="button" variant="secondary" size="icon" className="absolute -bottom-1 -right-1 h-7 w-7 rounded-full" onClick={() => avatarInputRef.current?.click()}>
+                <Camera className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="full_name">Nome Completo *</Label>
-            <Input id="full_name" value={formData.full_name} onChange={e => setFormData({ ...formData, full_name: e.target.value })} placeholder="Nome completo do usuário" className={errors.full_name ? "border-destructive" : ""} />
+            <Input id="full_name" value={formData.full_name} onChange={e => setFormData({ ...formData, full_name: e.target.value })} placeholder="Nome completo" className={errors.full_name ? "border-destructive" : ""} />
             {errors.full_name && <p className="text-sm text-destructive">{errors.full_name}</p>}
           </div>
 
@@ -114,7 +154,7 @@ export function UserFormDialog({ open, onOpenChange, user, onSubmit, isLoading }
                   <SelectItem key={sector} value={sector}>{sector}</SelectItem>
                 ))}
                 {sectorOptions.length === 0 && (
-                  <div className="px-2 py-1.5 text-sm text-muted-foreground">Nenhum setor cadastrado. Crie em Configurações.</div>
+                  <div className="px-2 py-1.5 text-sm text-muted-foreground">Nenhum setor cadastrado.</div>
                 )}
               </SelectContent>
             </Select>

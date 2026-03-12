@@ -39,13 +39,32 @@ Deno.serve(async (req) => {
         const { data: statuses } = await supabase.from("ticket_statuses").select("id").order("sort_order").limit(1);
         const statusId = statuses?.[0]?.id;
         if (statusId) {
-          await supabase.from("tickets").insert({
+          const { data: ticket } = await supabase.from("tickets").insert({
             title: autoCreateTicket.titulo,
             description: autoCreateTicket.descricao,
             created_by: user.id,
             status_id: statusId,
-          });
-          return new Response(JSON.stringify({ message: "Chamado criado com sucesso! O time de TI foi notificado e irá resolver sua solicitação." }),
+          }).select().single();
+
+          // Create notification for TI users
+          if (ticket) {
+            const adminClient = createClient(supabaseUrl, serviceKey);
+            const { data: tiUsers } = await adminClient.from("profiles").select("id").eq("role", "ti");
+            if (tiUsers) {
+              for (const ti of tiUsers) {
+                await adminClient.from("notifications").insert({
+                  user_id: ti.id,
+                  title: "Novo chamado aberto",
+                  message: `${autoCreateTicket.titulo}`,
+                  type: "ticket",
+                  entity_type: "ticket",
+                  entity_id: ticket.id,
+                });
+              }
+            }
+          }
+
+          return new Response(JSON.stringify({ message: "Chamado criado com sucesso! O time de TI foi notificado." }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" } });
         }
       } catch (ticketErr) {
@@ -56,11 +75,9 @@ Deno.serve(async (req) => {
 
     const adminClient = createClient(supabaseUrl, serviceKey);
 
-    // Build context based on mode
     let systemContext = "";
 
     if (tiMode) {
-      // TI mode: fetch all system data
       const [ticketsRes, profilesRes, appointmentsRes, knowledgeRes] = await Promise.all([
         adminClient.from("tickets").select("id, title, description, status_id, urgency_id, category_id, created_by, assigned_to, created_at, closed_at").order("created_at", { ascending: false }).limit(50),
         adminClient.from("profiles").select("id, full_name, email, role, sector, is_active, last_access"),
@@ -68,18 +85,17 @@ Deno.serve(async (req) => {
         adminClient.from("ai_knowledge_base").select("title, content").eq("is_active", true),
       ]);
 
-      const [statusesRes, urgenciesRes, categoriesRes] = await Promise.all([
+      const [statusesRes, urgenciesRes] = await Promise.all([
         adminClient.from("ticket_statuses").select("id, name").order("sort_order"),
         adminClient.from("ticket_urgencies").select("id, name").order("sort_order"),
-        adminClient.from("ticket_categories").select("id, name"),
       ]);
 
       const statusMap = new Map((statusesRes.data || []).map((s: any) => [s.id, s.name]));
       const urgencyMap = new Map((urgenciesRes.data || []).map((u: any) => [u.id, u.name]));
       const profileMap = new Map((profilesRes.data || []).map((p: any) => [p.id, p.full_name]));
 
-      const ticketsSummary = (ticketsRes.data || []).map((t: any) => 
-        `- "${t.title}" | Status: ${statusMap.get(t.status_id) || '?'} | Urgência: ${urgencyMap.get(t.urgency_id) || 'N/A'} | Criado por: ${profileMap.get(t.created_by) || '?'} | ${t.created_at?.slice(0,10)}`
+      const ticketsSummary = (ticketsRes.data || []).map((t: any) =>
+        `- "${t.title}" | Status: ${statusMap.get(t.status_id) || '?'} | Urgência: ${urgencyMap.get(t.urgency_id) || 'N/A'} | Criado por: ${profileMap.get(t.created_by) || '?'} | ${t.created_at?.slice(0, 10)}`
       ).join("\n");
 
       const usersSummary = (profilesRes.data || []).map((p: any) =>
@@ -92,50 +108,22 @@ Deno.serve(async (req) => {
 
       const knowledgeContext = (knowledgeRes.data || []).map((k: any) => `### ${k.title}\n${k.content}`).join("\n\n");
 
-      systemContext = `\n\nDADOS DO SISTEMA EM TEMPO REAL:\n\n## CHAMADOS (últimos 50):\n${ticketsSummary || 'Nenhum chamado.'}\n\n## USUÁRIOS:\n${usersSummary || 'Nenhum usuário.'}\n\n## AGENDAMENTOS (últimos 30):\n${appointmentsSummary || 'Nenhum agendamento.'}\n\n## BASE DE CONHECIMENTO:\n${knowledgeContext || 'Vazia.'}`;
+      systemContext = `\n\nDADOS DO SISTEMA EM TEMPO REAL:\n\n## CHAMADOS (últimos 50):\n${ticketsSummary || 'Nenhum.'}\n\n## USUÁRIOS:\n${usersSummary || 'Nenhum.'}\n\n## AGENDAMENTOS (últimos 30):\n${appointmentsSummary || 'Nenhum.'}\n\n## BASE DE CONHECIMENTO:\n${knowledgeContext || 'Vazia.'}`;
     } else {
-      // Colaborador mode: knowledge base only
       const { data: knowledgeItems } = await adminClient.from("ai_knowledge_base").select("title, content").eq("is_active", true);
       if (knowledgeItems && knowledgeItems.length > 0) {
-        systemContext = "\n\nBASE DE CONHECIMENTO (use estas informações para responder):\n" +
-          knowledgeItems.map((item: any) => `### ${item.title}\n${item.content}`).join("\n\n");
+        systemContext = "\n\nBASE DE CONHECIMENTO:\n" + knowledgeItems.map((item: any) => `### ${item.title}\n${item.content}`).join("\n\n");
       }
     }
 
     const SYSTEM_PROMPT = tiMode
-      ? `Você é o Assistente IA do Painel TI da Esquadromil. Você tem acesso a todos os dados do sistema em tempo real.
-
-Suas responsabilidades:
-1. Responder perguntas sobre chamados, usuários, agendamentos e configurações
-2. Fornecer análises e resumos dos dados
-3. Ajudar na tomada de decisões sobre priorização de chamados
-4. Identificar padrões e tendências
-
-Seja direto, preciso e use os dados fornecidos para embasar suas respostas.${systemContext}`
-      : `Você é o Assistente TI da Esquadromil, especializado em suporte técnico de primeiro nível.
-
-Suas responsabilidades:
-1. Ajudar colaboradores com problemas técnicos comuns
-2. Fornecer instruções claras e passo a passo
-3. Identificar quando um problema precisa de intervenção do suporte TI
-
-REGRAS IMPORTANTES:
-- Seja sempre educado e profissional
-- Use linguagem simples e acessível
-- Forneça soluções práticas quando possível
-- Quando o problema não puder ser resolvido remotamente, sugira a abertura de um chamado
-
-Quando identificar que é necessário abrir um chamado, responda com a seguinte estrutura JSON no final:
+      ? `Você é o Assistente IA do Painel TI da Esquadromil. Você tem acesso a todos os dados do sistema.
+Responda perguntas sobre chamados, usuários, agendamentos. Forneça análises e resumos. Seja direto e preciso.${systemContext}`
+      : `Você é o Assistente TI da Esquadromil. Ajude colaboradores com problemas técnicos.
+Forneça soluções práticas. Quando necessário, sugira abrir chamado com JSON:
 \`\`\`json
-{
-  "sugerir_chamado": true,
-  "titulo": "Título sugerido para o chamado",
-  "descricao": "Descrição detalhada do problema",
-  "categoria": "hardware|software|rede|acesso|outros"
-}
-\`\`\`
-
-Só inclua o JSON quando realmente for necessário abrir um chamado.${systemContext}`;
+{"sugerir_chamado": true, "titulo": "...", "descricao": "..."}
+\`\`\`${systemContext}`;
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
@@ -147,7 +135,7 @@ Só inclua o JSON quando realmente for necessário abrir um chamado.${systemCont
       method: "POST",
       headers: { "Authorization": `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "google/gemini-2.5-flash",
         messages: [{ role: "system", content: SYSTEM_PROMPT }, ...messages],
         temperature: 0.7,
         max_tokens: 2048,
@@ -158,8 +146,8 @@ Só inclua o JSON quando realmente for necessário abrir um chamado.${systemCont
     if (!response.ok) {
       const errorText = await response.text();
       console.error("AI Gateway error:", response.status, errorText);
-      if (response.status === 429) return new Response(JSON.stringify({ error: "Limite de requisições atingido. Tente novamente." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      if (response.status === 402) return new Response(JSON.stringify({ error: "Créditos de IA esgotados." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      if (response.status === 429) return new Response(JSON.stringify({ error: "Limite atingido. Tente novamente." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      if (response.status === 402) return new Response(JSON.stringify({ error: "Créditos esgotados." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       return new Response(JSON.stringify({ error: "Erro ao conectar com a IA." }), { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 

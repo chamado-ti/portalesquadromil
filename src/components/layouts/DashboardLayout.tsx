@@ -1,45 +1,36 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-  LayoutDashboard,
-  Users,
-  Ticket,
-  Calendar,
-  Bell,
-  LogOut,
-  Menu,
-  ChevronLeft,
-  FileText,
-  Bot,
-  QrCode,
-  Settings,
-  History,
-  BarChart3,
+  LayoutDashboard, Users, Ticket, Calendar, Bell, LogOut, Menu, ChevronLeft,
+  FileText, Bot, QrCode, Settings, History, BarChart3, Check, CheckCheck, Trash2, Plus,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
+  Tooltip, TooltipContent, TooltipTrigger,
 } from '@/components/ui/tooltip';
+import {
+  Popover, PopoverContent, PopoverTrigger,
+} from '@/components/ui/popover';
 import { useAuth } from '@/contexts/AuthContext';
 import { signOut, getRoleLabel, getRoleColor, type AppRole } from '@/lib/auth';
 import { useToast } from '@/hooks/use-toast';
 import { useSystemSettings } from '@/hooks/useSystemSettings';
+import { useNotifications } from '@/hooks/useNotifications';
 import logoEsquadromil from '@/assets/logo-esquadromil.png';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 interface NavItem {
   label: string;
   href: string;
   icon: React.ComponentType<{ className?: string }>;
   roles: AppRole[];
-  badge?: number;
 }
 
 const navItems: NavItem[] = [
-  // TI routes
   { label: 'Dashboard', href: '/ti', icon: LayoutDashboard, roles: ['ti'] },
   { label: 'Usuários', href: '/ti/usuarios', icon: Users, roles: ['ti'] },
   { label: 'Chamados', href: '/ti/chamados', icon: Ticket, roles: ['ti'] },
@@ -49,12 +40,11 @@ const navItems: NavItem[] = [
   { label: 'Assistente IA', href: '/ti/assistente', icon: Bot, roles: ['ti'] },
   { label: 'Configurações', href: '/ti/configuracoes', icon: Settings, roles: ['ti'] },
 
-  // Guarita routes
-  { label: 'Agendamentos', href: '/guarita', icon: Calendar, roles: ['guarita'] },
+  { label: 'Painel', href: '/guarita', icon: LayoutDashboard, roles: ['guarita'] },
+  { label: 'Novo Agendamento', href: '/guarita/agendar', icon: Plus, roles: ['guarita'] },
   { label: 'Leitura QR Code', href: '/guarita/qrcode', icon: QrCode, roles: ['guarita'] },
   { label: 'Histórico', href: '/guarita/historico', icon: History, roles: ['guarita'] },
 
-  // Colaborador routes
   { label: 'Início', href: '/colaborador', icon: LayoutDashboard, roles: ['colaborador'] },
   { label: 'Assistente IA', href: '/colaborador/assistente', icon: Bot, roles: ['colaborador'] },
   { label: 'Meus Chamados', href: '/colaborador/chamados', icon: Ticket, roles: ['colaborador'] },
@@ -72,6 +62,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const { toast } = useToast();
   const { profile, role } = useAuth();
   const { getSetting } = useSystemSettings();
+  const { notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification } = useNotifications();
 
   const customLogo = getSetting('company_logo') as { url?: string } | undefined;
   const logoSrc = customLogo?.url || logoEsquadromil;
@@ -83,17 +74,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const handleSignOut = async () => {
     try {
       await signOut();
-      toast({
-        title: 'Até logo!',
-        description: 'Você saiu do sistema.',
-      });
+      toast({ title: 'Até logo!', description: 'Você saiu do sistema.' });
       navigate('/');
-    } catch (error) {
-      toast({
-        variant: 'destructive',
-        title: 'Erro ao sair',
-        description: 'Tente novamente.',
-      });
+    } catch {
+      toast({ variant: 'destructive', title: 'Erro ao sair', description: 'Tente novamente.' });
     }
   };
 
@@ -104,41 +88,37 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     return location.pathname.startsWith(href);
   };
 
+  const getNotificationIcon = (type: string) => {
+    switch (type) {
+      case 'ticket': return <Ticket className="h-4 w-4 text-primary" />;
+      case 'message': return <FileText className="h-4 w-4 text-info" />;
+      case 'appointment': return <Calendar className="h-4 w-4 text-success" />;
+      default: return <Bell className="h-4 w-4 text-muted-foreground" />;
+    }
+  };
+
   return (
     <div className="flex min-h-screen w-full bg-secondary">
-      {/* Sidebar */}
       <aside
         className={cn(
           'fixed left-0 top-0 z-40 flex h-screen flex-col bg-sidebar transition-all duration-300',
           collapsed ? 'w-16' : 'w-64'
         )}
       >
-        {/* Logo */}
         <div className="flex h-16 items-center justify-between border-b border-sidebar-border px-4">
           {!collapsed && (
             <Link to="/" className="flex items-center gap-3">
-              <img
-                src={logoSrc}
-                alt="Esquadromil"
-                className="h-8 w-8 object-contain"
-              />
-              <span className="font-semibold text-sidebar-foreground">
-                Portal
-              </span>
+              <img src={logoSrc} alt="Esquadromil" className="h-8 w-8 object-contain" />
+              <span className="font-semibold text-sidebar-foreground">Portal</span>
             </Link>
           )}
           {collapsed && (
             <Link to="/" className="mx-auto">
-              <img
-                src={logoSrc}
-                alt="Esquadromil"
-                className="h-8 w-8 object-contain"
-              />
+              <img src={logoSrc} alt="Esquadromil" className="h-8 w-8 object-contain" />
             </Link>
           )}
           <Button
-            variant="ghost"
-            size="icon"
+            variant="ghost" size="icon"
             onClick={() => setCollapsed(!collapsed)}
             className={cn("text-sidebar-foreground hover:bg-sidebar-accent", collapsed && "hidden")}
           >
@@ -148,24 +128,17 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
         {collapsed && (
           <div className="flex justify-center py-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setCollapsed(false)}
-              className="text-sidebar-foreground hover:bg-sidebar-accent"
-            >
+            <Button variant="ghost" size="icon" onClick={() => setCollapsed(false)} className="text-sidebar-foreground hover:bg-sidebar-accent">
               <Menu className="h-5 w-5" />
             </Button>
           </div>
         )}
 
-        {/* Navigation */}
         <nav className="flex-1 overflow-y-auto py-4">
           <ul className="space-y-1 px-2">
             {filteredNavItems.map((item) => {
               const isActive = isActiveRoute(item.href);
               const NavIcon = item.icon;
-
               const navLink = (
                 <Link
                   key={item.href}
@@ -178,81 +151,45 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                   )}
                 >
                   <NavIcon className="h-5 w-5 flex-shrink-0" />
-                  {!collapsed && (
-                    <>
-                      <span className="flex-1">{item.label}</span>
-                      {item.badge !== undefined && item.badge > 0 && (
-                        <Badge
-                          variant="secondary"
-                          className="ml-auto bg-sidebar-primary text-sidebar-primary-foreground"
-                        >
-                          {item.badge}
-                        </Badge>
-                      )}
-                    </>
-                  )}
+                  {!collapsed && <span className="flex-1">{item.label}</span>}
                 </Link>
               );
 
               if (collapsed) {
                 return (
                   <Tooltip key={item.href} delayDuration={0}>
-                    <TooltipTrigger asChild>
-                      <li>{navLink}</li>
-                    </TooltipTrigger>
-                    <TooltipContent side="right" className="font-medium">
-                      {item.label}
-                    </TooltipContent>
+                    <TooltipTrigger asChild><li>{navLink}</li></TooltipTrigger>
+                    <TooltipContent side="right" className="font-medium">{item.label}</TooltipContent>
                   </Tooltip>
                 );
               }
-
               return <li key={item.href}>{navLink}</li>;
             })}
           </ul>
         </nav>
 
-        {/* User section */}
         <div className="border-t border-sidebar-border p-4">
           {!collapsed ? (
             <div className="space-y-3">
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-sidebar-accent font-semibold text-sidebar-accent-foreground">
-                  {profile?.full_name?.charAt(0).toUpperCase() || 'U'}
+                <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-sidebar-accent font-semibold text-sidebar-accent-foreground">
+                  {(profile as any)?.avatar_url
+                    ? <img src={(profile as any).avatar_url} className="h-full w-full object-cover" />
+                    : profile?.full_name?.charAt(0).toUpperCase() || 'U'}
                 </div>
                 <div className="flex-1 overflow-hidden">
-                  <p className="truncate text-sm font-medium text-sidebar-foreground">
-                    {profile?.full_name || 'Usuário'}
-                  </p>
-                  {role && (
-                    <Badge
-                      variant="outline"
-                      className={cn('mt-1 text-xs', getRoleColor(role))}
-                    >
-                      {getRoleLabel(role)}
-                    </Badge>
-                  )}
+                  <p className="truncate text-sm font-medium text-sidebar-foreground">{profile?.full_name || 'Usuário'}</p>
+                  {role && <Badge variant="outline" className={cn('mt-1 text-xs', getRoleColor(role))}>{getRoleLabel(role)}</Badge>}
                 </div>
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleSignOut}
-                className="w-full justify-start text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground"
-              >
-                <LogOut className="mr-2 h-4 w-4" />
-                Sair
+              <Button variant="ghost" size="sm" onClick={handleSignOut} className="w-full justify-start text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground">
+                <LogOut className="mr-2 h-4 w-4" />Sair
               </Button>
             </div>
           ) : (
             <Tooltip delayDuration={0}>
               <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={handleSignOut}
-                  className="w-full text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground"
-                >
+                <Button variant="ghost" size="icon" onClick={handleSignOut} className="w-full text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground">
                   <LogOut className="h-5 w-5" />
                 </Button>
               </TooltipTrigger>
@@ -262,27 +199,69 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         </div>
       </aside>
 
-      {/* Main content */}
-      <main
-        className={cn(
-          'flex-1 transition-all duration-300',
-          collapsed ? 'ml-16' : 'ml-64'
-        )}
-      >
-        {/* Header */}
+      <main className={cn('flex-1 transition-all duration-300', collapsed ? 'ml-16' : 'ml-64')}>
         <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background px-6">
           <h1 className="text-lg font-semibold text-foreground">
-            {filteredNavItems.find((item) => isActiveRoute(item.href))?.label ||
-              'Portal'}
+            {filteredNavItems.find((item) => isActiveRoute(item.href))?.label || 'Portal'}
           </h1>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="relative">
-              <Bell className="h-5 w-5" />
-            </Button>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="ghost" size="icon" className="relative">
+                  <Bell className="h-5 w-5" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -right-0.5 -top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-80 p-0">
+                <div className="flex items-center justify-between border-b px-4 py-3">
+                  <h3 className="text-sm font-semibold">Notificações</h3>
+                  {unreadCount > 0 && (
+                    <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => markAllAsRead()}>
+                      <CheckCheck className="mr-1 h-3 w-3" />Marcar todas
+                    </Button>
+                  )}
+                </div>
+                <ScrollArea className="max-h-80">
+                  {notifications.length === 0 ? (
+                    <div className="py-8 text-center text-sm text-muted-foreground">
+                      <Bell className="mx-auto mb-2 h-8 w-8 opacity-30" />
+                      <p>Nenhuma notificação</p>
+                    </div>
+                  ) : (
+                    <div className="divide-y">
+                      {notifications.slice(0, 20).map(n => (
+                        <div
+                          key={n.id}
+                          className={cn(
+                            'flex items-start gap-3 px-4 py-3 transition-colors hover:bg-muted/50 cursor-pointer',
+                            !n.read && 'bg-primary/5'
+                          )}
+                          onClick={() => { if (!n.read) markAsRead(n.id); }}
+                        >
+                          <div className="mt-0.5">{getNotificationIcon(n.type)}</div>
+                          <div className="flex-1 min-w-0">
+                            <p className={cn('text-sm', !n.read && 'font-medium')}>{n.title}</p>
+                            <p className="text-xs text-muted-foreground line-clamp-2">{n.message}</p>
+                            <p className="mt-1 text-[10px] text-muted-foreground">
+                              {format(new Date(n.created_at), "dd/MM 'às' HH:mm", { locale: ptBR })}
+                            </p>
+                          </div>
+                          <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={(e) => { e.stopPropagation(); deleteNotification(n.id); }}>
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </ScrollArea>
+              </PopoverContent>
+            </Popover>
           </div>
         </header>
-
-        {/* Page content */}
         <div className="p-6">{children}</div>
       </main>
     </div>

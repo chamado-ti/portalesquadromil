@@ -136,6 +136,23 @@ export function useTickets() {
     mutationFn: async ({ ticketId, statusId }: { ticketId: string; statusId: string }) => {
       const { error } = await supabase.from("tickets").update({ status_id: statusId }).eq("id", ticketId);
       if (error) throw error;
+
+      // Notify ticket creator about status change
+      const ticket = ticketsQuery.data?.find(t => t.id === ticketId);
+      const newStatus = statusesQuery.data?.find(s => s.id === statusId);
+      if (ticket && newStatus) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user && ticket.created_by !== user.id) {
+          await supabase.from("notifications").insert({
+            user_id: ticket.created_by,
+            title: "Status do chamado atualizado",
+            message: `"${ticket.title}" → ${newStatus.name}`,
+            type: "ticket",
+            entity_type: "ticket",
+            entity_id: ticketId,
+          });
+        }
+      }
     },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["tickets"] }); },
     onError: () => { toast({ variant: "destructive", title: "Erro", description: "Não foi possível atualizar o status." }); },
@@ -147,6 +164,19 @@ export function useTickets() {
       if (!user) throw new Error("Usuário não autenticado");
       const { error } = await supabase.from("ticket_messages").insert({ ticket_id: ticketId, sender_id: user.id, message });
       if (error) throw error;
+
+      // Notify the ticket creator
+      const ticket = ticketsQuery.data?.find(t => t.id === ticketId);
+      if (ticket && ticket.created_by !== user.id) {
+        await supabase.from("notifications").insert({
+          user_id: ticket.created_by,
+          title: "Nova mensagem no chamado",
+          message: message.slice(0, 100),
+          type: "message",
+          entity_type: "ticket",
+          entity_id: ticketId,
+        });
+      }
     },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["tickets"] }); toast({ title: "Mensagem enviada" }); },
     onError: () => { toast({ variant: "destructive", title: "Erro", description: "Não foi possível enviar a mensagem." }); },
