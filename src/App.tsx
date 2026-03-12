@@ -26,6 +26,7 @@ const TIAssistentePage = React.lazy(() => import("./pages/ti/TIAssistentePage"))
 const GuaritaDashboard = React.lazy(() => import("./pages/guarita/GuaritaDashboard"));
 const GuaritaQRCodePage = React.lazy(() => import("./pages/guarita/GuaritaQRCodePage"));
 const GuaritaHistoricoPage = React.lazy(() => import("./pages/guarita/GuaritaHistoricoPage"));
+const GuaritaAgendarPage = React.lazy(() => import("./pages/guarita/GuaritaAgendarPage"));
 
 const ColaboradorDashboard = React.lazy(() => import("./pages/colaborador/ColaboradorDashboard"));
 const ColaboradorAssistentePage = React.lazy(() => import("./pages/colaborador/ColaboradorAssistentePage"));
