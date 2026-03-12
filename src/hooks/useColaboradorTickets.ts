@@ -187,6 +187,21 @@ export function useColaboradorTickets() {
         message,
       });
       if (error) throw error;
+
+      // Notify TI of new message
+      const { data: tiProfiles } = await supabase.from('profiles').select('id').eq('role', 'ti' as any);
+      if (tiProfiles) {
+        for (const ti of tiProfiles) {
+          await supabase.from('notifications').insert({
+            user_id: ti.id,
+            title: 'Nova mensagem em chamado',
+            message: message.slice(0, 100),
+            type: 'message',
+            entity_type: 'ticket',
+            entity_id: ticketId,
+          });
+        }
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ticket-messages'] });
