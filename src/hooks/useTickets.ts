@@ -136,6 +136,23 @@ export function useTickets() {
     mutationFn: async ({ ticketId, statusId }: { ticketId: string; statusId: string }) => {
       const { error } = await supabase.from("tickets").update({ status_id: statusId }).eq("id", ticketId);
       if (error) throw error;
+
+      // Notify ticket creator about status change
+      const ticket = ticketsQuery.data?.find(t => t.id === ticketId);
+      const newStatus = statusesQuery.data?.find(s => s.id === statusId);
+      if (ticket && newStatus) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user && ticket.created_by !== user.id) {
+          await supabase.from("notifications").insert({
+            user_id: ticket.created_by,
+            title: "Status do chamado atualizado",
+            message: `"${ticket.title}" → ${newStatus.name}`,
+            type: "ticket",
+            entity_type: "ticket",
+            entity_id: ticketId,
+          });
+        }
+      }
     },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["tickets"] }); },
     onError: () => { toast({ variant: "destructive", title: "Erro", description: "Não foi possível atualizar o status." }); },
