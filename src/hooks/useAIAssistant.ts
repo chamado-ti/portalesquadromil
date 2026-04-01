@@ -2,11 +2,19 @@ import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 
+export interface FileAttachment {
+  type: 'image' | 'pdf' | 'audio' | 'file';
+  name: string;
+  base64: string;
+  mimeType: string;
+}
+
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
+  attachments?: FileAttachment[];
   ticketSuggestion?: {
     titulo: string;
     descricao: string;
@@ -53,8 +61,8 @@ export function useAIAssistant() {
     } catch (err) { console.error('Error auto-creating ticket:', err); }
   }, [queryClient]);
 
-  const sendMessage = useCallback(async (userMessage: string) => {
-    const userChatMessage: ChatMessage = { id: crypto.randomUUID(), role: 'user', content: userMessage, timestamp: new Date() };
+  const sendMessage = useCallback(async (userMessage: string, attachments?: FileAttachment[], tiMode?: boolean) => {
+    const userChatMessage: ChatMessage = { id: crypto.randomUUID(), role: 'user', content: userMessage, timestamp: new Date(), attachments };
     setMessages(prev => [...prev, userChatMessage]);
     setIsLoading(true);
 
@@ -62,11 +70,27 @@ export function useAIAssistant() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Não autenticado');
 
-      const messagesForAPI = [...messages, userChatMessage].map(m => ({ role: m.role, content: m.content }));
+      // Build messages for API - include multimodal content
+      const messagesForAPI = [...messages, userChatMessage].map(m => {
+        if (m.attachments && m.attachments.length > 0) {
+          const contentParts: any[] = [{ type: 'text', text: m.content || 'Analise este arquivo.' }];
+          for (const att of m.attachments) {
+            if (att.type === 'image') {
+              contentParts.push({ type: 'image_url', image_url: { url: `data:${att.mimeType};base64,${att.base64}` } });
+            } else {
+              // For PDFs, audio, etc - send as text description + base64
+              contentParts.push({ type: 'text', text: `[Arquivo anexado: ${att.name} (${att.mimeType})]\nConteúdo em base64: ${att.base64.slice(0, 5000)}...` });
+            }
+          }
+          return { role: m.role, content: contentParts };
+        }
+        return { role: m.role, content: m.content };
+      });
+
       const resp = await fetch(STREAM_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}`, 'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
-        body: JSON.stringify({ messages: messagesForAPI }),
+        body: JSON.stringify({ messages: messagesForAPI, tiMode }),
       });
 
       if (!resp.ok) { const errData = await resp.json().catch(() => ({})); throw new Error(errData.error || 'Erro ao conectar com a IA'); }

@@ -46,7 +46,6 @@ Deno.serve(async (req) => {
             status_id: statusId,
           }).select().single();
 
-          // Create notification for TI users
           if (ticket) {
             const adminClient = createClient(supabaseUrl, serviceKey);
             const { data: tiUsers } = await adminClient.from("profiles").select("id").eq("role", "ti");
@@ -118,9 +117,11 @@ Deno.serve(async (req) => {
 
     const SYSTEM_PROMPT = tiMode
       ? `Você é o Assistente IA do Painel TI da Esquadromil. Você tem acesso a todos os dados do sistema.
-Responda perguntas sobre chamados, usuários, agendamentos. Forneça análises e resumos. Seja direto e preciso.${systemContext}`
+Responda perguntas sobre chamados, usuários, agendamentos. Forneça análises e resumos. Seja direto e preciso.
+Quando receber imagens, analise-as detalhadamente. Quando receber PDFs ou documentos, extraia e analise o conteúdo.${systemContext}`
       : `Você é o Assistente TI da Esquadromil. Ajude colaboradores com problemas técnicos.
-Forneça soluções práticas. Quando necessário, sugira abrir chamado com JSON:
+Forneça soluções práticas. Quando receber imagens (prints de erro, fotos de equipamentos), analise-as para diagnosticar o problema.
+Quando necessário, sugira abrir chamado com JSON:
 \`\`\`json
 {"sugerir_chamado": true, "titulo": "...", "descricao": "..."}
 \`\`\`${systemContext}`;
@@ -131,6 +132,7 @@ Forneça soluções práticas. Quando necessário, sugira abrir chamado com JSON
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    // Use gemini-2.5-flash for multimodal support (images)
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: { "Authorization": `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
@@ -138,7 +140,7 @@ Forneça soluções práticas. Quando necessário, sugira abrir chamado com JSON
         model: "google/gemini-2.5-flash",
         messages: [{ role: "system", content: SYSTEM_PROMPT }, ...messages],
         temperature: 0.7,
-        max_tokens: 2048,
+        max_tokens: 4096,
         stream: true,
       }),
     });
@@ -146,8 +148,8 @@ Forneça soluções práticas. Quando necessário, sugira abrir chamado com JSON
     if (!response.ok) {
       const errorText = await response.text();
       console.error("AI Gateway error:", response.status, errorText);
-      if (response.status === 429) return new Response(JSON.stringify({ error: "Limite atingido. Tente novamente." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      if (response.status === 402) return new Response(JSON.stringify({ error: "Créditos esgotados." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      if (response.status === 429) return new Response(JSON.stringify({ error: "Limite de requisições atingido. Aguarde um momento e tente novamente." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      if (response.status === 402) return new Response(JSON.stringify({ error: "Créditos de IA esgotados." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       return new Response(JSON.stringify({ error: "Erro ao conectar com a IA." }), { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
