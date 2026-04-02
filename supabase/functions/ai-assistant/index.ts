@@ -31,7 +31,7 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Não autorizado" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const { messages, autoCreateTicket, tiMode } = await req.json();
+    const { messages, autoCreateTicket, tiMode, agentId } = await req.json();
 
     // Auto-create ticket
     if (autoCreateTicket) {
@@ -74,9 +74,38 @@ Deno.serve(async (req) => {
 
     const adminClient = createClient(supabaseUrl, serviceKey);
 
-    let systemContext = "";
+    let systemPrompt = "";
+    let model = "google/gemini-2.5-flash";
 
-    if (tiMode) {
+    // If using a custom agent
+    if (agentId) {
+      const { data: agent } = await adminClient.from("ai_agents").select("*").eq("id", agentId).single();
+      if (!agent) {
+        return new Response(JSON.stringify({ error: "Agente não encontrado" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      model = agent.model || "google/gemini-2.5-flash";
+      systemPrompt = agent.system_prompt || "Você é um assistente útil.";
+
+      // Add DB context if agent has access
+      if (agent.db_access_level !== 'none') {
+        const tables = agent.db_access_level === 'full'
+          ? ['tickets', 'profiles', 'appointments', 'notifications', 'audit_logs', 'sectors', 'tasks']
+          : (agent.db_tables || []);
+
+        let dbContext = "\n\nDADOS DO SISTEMA:\n";
+        for (const table of tables) {
+          try {
+            const { data } = await adminClient.from(table).select("*").order("created_at", { ascending: false }).limit(30);
+            if (data && data.length > 0) {
+              dbContext += `\n## ${table.toUpperCase()} (${data.length} registros):\n${JSON.stringify(data.slice(0, 10), null, 2)}\n`;
+            }
+          } catch {}
+        }
+        systemPrompt += dbContext;
+      }
+    } else if (tiMode) {
+      // Default TI assistant
       const [ticketsRes, profilesRes, appointmentsRes, knowledgeRes] = await Promise.all([
         adminClient.from("tickets").select("id, title, description, status_id, urgency_id, category_id, created_by, assigned_to, created_at, closed_at").order("created_at", { ascending: false }).limit(50),
         adminClient.from("profiles").select("id, full_name, email, role, sector, is_active, last_access"),
@@ -107,24 +136,38 @@ Deno.serve(async (req) => {
 
       const knowledgeContext = (knowledgeRes.data || []).map((k: any) => `### ${k.title}\n${k.content}`).join("\n\n");
 
-      systemContext = `\n\nDADOS DO SISTEMA EM TEMPO REAL:\n\n## CHAMADOS (últimos 50):\n${ticketsSummary || 'Nenhum.'}\n\n## USUÁRIOS:\n${usersSummary || 'Nenhum.'}\n\n## AGENDAMENTOS (últimos 30):\n${appointmentsSummary || 'Nenhum.'}\n\n## BASE DE CONHECIMENTO:\n${knowledgeContext || 'Vazia.'}`;
-    } else {
-      const { data: knowledgeItems } = await adminClient.from("ai_knowledge_base").select("title, content").eq("is_active", true);
-      if (knowledgeItems && knowledgeItems.length > 0) {
-        systemContext = "\n\nBASE DE CONHECIMENTO:\n" + knowledgeItems.map((item: any) => `### ${item.title}\n${item.content}`).join("\n\n");
-      }
-    }
-
-    const SYSTEM_PROMPT = tiMode
-      ? `Você é o Assistente IA do Painel TI da Esquadromil. Você tem acesso a todos os dados do sistema.
+      systemPrompt = `Você é o Assistente IA do Painel TI da Esquadromil. Você tem acesso a todos os dados do sistema.
 Responda perguntas sobre chamados, usuários, agendamentos. Forneça análises e resumos. Seja direto e preciso.
-Quando receber imagens, analise-as detalhadamente. Quando receber PDFs ou documentos, extraia e analise o conteúdo.${systemContext}`
-      : `Você é o Assistente TI da Esquadromil. Ajude colaboradores com problemas técnicos.
+Quando receber imagens, analise-as detalhadamente. Quando receber PDFs ou documentos, extraia e analise o conteúdo.
+
+DADOS DO SISTEMA EM TEMPO REAL:
+
+## CHAMADOS (últimos 50):
+${ticketsSummary || 'Nenhum.'}
+
+## USUÁRIOS:
+${usersSummary || 'Nenhum.'}
+
+## AGENDAMENTOS (últimos 30):
+${appointmentsSummary || 'Nenhum.'}
+
+## BASE DE CONHECIMENTO:
+${knowledgeContext || 'Vazia.'}`;
+    } else {
+      // Colaborador assistant
+      const { data: knowledgeItems } = await adminClient.from("ai_knowledge_base").select("title, content").eq("is_active", true);
+      let knowledgeContext = "";
+      if (knowledgeItems && knowledgeItems.length > 0) {
+        knowledgeContext = "\n\nBASE DE CONHECIMENTO:\n" + knowledgeItems.map((item: any) => `### ${item.title}\n${item.content}`).join("\n\n");
+      }
+
+      systemPrompt = `Você é o Assistente TI da Esquadromil. Ajude colaboradores com problemas técnicos.
 Forneça soluções práticas. Quando receber imagens (prints de erro, fotos de equipamentos), analise-as para diagnosticar o problema.
 Quando necessário, sugira abrir chamado com JSON:
 \`\`\`json
 {"sugerir_chamado": true, "titulo": "...", "descricao": "..."}
-\`\`\`${systemContext}`;
+\`\`\`${knowledgeContext}`;
+    }
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
@@ -132,13 +175,12 @@ Quando necessário, sugira abrir chamado com JSON:
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Use gemini-2.5-flash for multimodal support (images)
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: { "Authorization": `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [{ role: "system", content: SYSTEM_PROMPT }, ...messages],
+        model,
+        messages: [{ role: "system", content: systemPrompt }, ...messages],
         temperature: 0.7,
         max_tokens: 4096,
         stream: true,

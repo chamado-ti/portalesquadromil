@@ -14,6 +14,121 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_agent_access: {
+        Row: {
+          access_type: string
+          agent_id: string
+          created_at: string
+          id: string
+          target_value: string
+        }
+        Insert: {
+          access_type: string
+          agent_id: string
+          created_at?: string
+          id?: string
+          target_value: string
+        }
+        Update: {
+          access_type?: string
+          agent_id?: string
+          created_at?: string
+          id?: string
+          target_value?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_agent_access_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "ai_agents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_agent_conversations: {
+        Row: {
+          agent_id: string
+          created_at: string | null
+          id: string
+          messages: Json
+          title: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          agent_id: string
+          created_at?: string | null
+          id?: string
+          messages?: Json
+          title?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          agent_id?: string
+          created_at?: string | null
+          id?: string
+          messages?: Json
+          title?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_agent_conversations_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "ai_agents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_agents: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          db_access_level: string
+          db_tables: string[] | null
+          description: string | null
+          id: string
+          is_active: boolean
+          memory_enabled: boolean
+          model: string
+          name: string
+          system_prompt: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          db_access_level?: string
+          db_tables?: string[] | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          memory_enabled?: boolean
+          model?: string
+          name: string
+          system_prompt?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          db_access_level?: string
+          db_tables?: string[] | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          memory_enabled?: boolean
+          model?: string
+          name?: string
+          system_prompt?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       ai_conversations: {
         Row: {
           created_at: string | null
@@ -199,6 +314,45 @@ export type Database = {
         }
         Relationships: []
       }
+      module_settings: {
+        Row: {
+          allowed_roles: string[] | null
+          allowed_sectors: string[] | null
+          allowed_users: string[] | null
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          module_key: string
+          module_name: string
+          updated_at: string
+        }
+        Insert: {
+          allowed_roles?: string[] | null
+          allowed_sectors?: string[] | null
+          allowed_users?: string[] | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          module_key: string
+          module_name: string
+          updated_at?: string
+        }
+        Update: {
+          allowed_roles?: string[] | null
+          allowed_sectors?: string[] | null
+          allowed_users?: string[] | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          module_key?: string
+          module_name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           created_at: string
@@ -313,6 +467,83 @@ export type Database = {
           updated_at?: string | null
           updated_by?: string | null
           value?: Json
+        }
+        Relationships: []
+      }
+      task_comments: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          task_id: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          task_id: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          task_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_comments_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tasks: {
+        Row: {
+          assigned_to: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          due_date: string | null
+          id: string
+          priority: string
+          sector: string | null
+          sort_order: number
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          priority?: string
+          sector?: string | null
+          sort_order?: number
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          priority?: string
+          sector?: string | null
+          sort_order?: number
+          status?: string
+          title?: string
+          updated_at?: string
         }
         Relationships: []
       }
