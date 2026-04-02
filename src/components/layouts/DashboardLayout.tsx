@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Ticket, Calendar, Bell, LogOut, Menu, ChevronLeft,
   FileText, Bot, QrCode, Settings, History, BarChart3, Check, CheckCheck, Trash2, Plus,
+  Blocks, ListTodo, Cpu,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -35,6 +36,9 @@ const navItems: NavItem[] = [
   { label: 'Usuários', href: '/ti/usuarios', icon: Users, roles: ['ti'] },
   { label: 'Chamados', href: '/ti/chamados', icon: Ticket, roles: ['ti'] },
   { label: 'Agendamentos', href: '/ti/agendamentos', icon: Calendar, roles: ['ti'] },
+  { label: 'Tarefas', href: '/ti/tarefas', icon: ListTodo, roles: ['ti'] },
+  { label: 'Agentes IA', href: '/ti/agentes', icon: Cpu, roles: ['ti'] },
+  { label: 'Módulos', href: '/ti/modulos', icon: Blocks, roles: ['ti'] },
   { label: 'Logs', href: '/ti/logs', icon: FileText, roles: ['ti'] },
   { label: 'Relatórios', href: '/ti/relatorios', icon: BarChart3, roles: ['ti'] },
   { label: 'Assistente IA', href: '/ti/assistente', icon: Bot, roles: ['ti'] },
@@ -47,6 +51,7 @@ const navItems: NavItem[] = [
 
   { label: 'Início', href: '/colaborador', icon: LayoutDashboard, roles: ['colaborador'] },
   { label: 'Assistente IA', href: '/colaborador/assistente', icon: Bot, roles: ['colaborador'] },
+  { label: 'Meus Agentes', href: '/colaborador/agentes', icon: Cpu, roles: ['colaborador'] },
   { label: 'Meus Chamados', href: '/colaborador/chamados', icon: Ticket, roles: ['colaborador'] },
   { label: 'Agendamentos', href: '/colaborador/agendamentos', icon: Calendar, roles: ['colaborador'] },
 ];
@@ -91,8 +96,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const getNotificationIcon = (type: string) => {
     switch (type) {
       case 'ticket': return <Ticket className="h-4 w-4 text-primary" />;
-      case 'message': return <FileText className="h-4 w-4 text-info" />;
-      case 'appointment': return <Calendar className="h-4 w-4 text-success" />;
+      case 'message': return <FileText className="h-4 w-4 text-primary" />;
+      case 'appointment': return <Calendar className="h-4 w-4 text-primary" />;
       default: return <Bell className="h-4 w-4 text-muted-foreground" />;
     }
   };

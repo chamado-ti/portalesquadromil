@@ -22,6 +22,9 @@ const TILogsPage = React.lazy(() => import("./pages/ti/TILogsPage"));
 const TIConfiguracoesPage = React.lazy(() => import("./pages/ti/TIConfiguracoesPage"));
 const TIRelatoriosPage = React.lazy(() => import("./pages/ti/TIRelatoriosPage"));
 const TIAssistentePage = React.lazy(() => import("./pages/ti/TIAssistentePage"));
+const TIAgentesPage = React.lazy(() => import("./pages/ti/TIAgentesPage"));
+const TIModulosPage = React.lazy(() => import("./pages/ti/TIModulosPage"));
+const TITarefasPage = React.lazy(() => import("./pages/ti/TITarefasPage"));
 
 const GuaritaDashboard = React.lazy(() => import("./pages/guarita/GuaritaDashboard"));
 const GuaritaQRCodePage = React.lazy(() => import("./pages/guarita/GuaritaQRCodePage"));
@@ -32,6 +35,7 @@ const ColaboradorDashboard = React.lazy(() => import("./pages/colaborador/Colabo
 const ColaboradorAssistentePage = React.lazy(() => import("./pages/colaborador/ColaboradorAssistentePage"));
 const ColaboradorChamadosPage = React.lazy(() => import("./pages/colaborador/ColaboradorChamadosPage"));
 const ColaboradorAgendamentosPage = React.lazy(() => import("./pages/colaborador/ColaboradorAgendamentosPage"));
+const ColaboradorAgentesPage = React.lazy(() => import("./pages/colaborador/ColaboradorAgentesPage"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -64,6 +68,9 @@ const App = () => (
                 <Route path="/ti/configuracoes" element={<ProtectedRoute allowedRoles={['ti']}><TIConfiguracoesPage /></ProtectedRoute>} />
                 <Route path="/ti/relatorios" element={<ProtectedRoute allowedRoles={['ti']}><TIRelatoriosPage /></ProtectedRoute>} />
                 <Route path="/ti/assistente" element={<ProtectedRoute allowedRoles={['ti']}><TIAssistentePage /></ProtectedRoute>} />
+                <Route path="/ti/agentes" element={<ProtectedRoute allowedRoles={['ti']}><TIAgentesPage /></ProtectedRoute>} />
+                <Route path="/ti/modulos" element={<ProtectedRoute allowedRoles={['ti']}><TIModulosPage /></ProtectedRoute>} />
+                <Route path="/ti/tarefas" element={<ProtectedRoute allowedRoles={['ti']}><TITarefasPage /></ProtectedRoute>} />
 
                 <Route path="/guarita" element={<ProtectedRoute allowedRoles={['guarita']}><GuaritaDashboard /></ProtectedRoute>} />
                 <Route path="/guarita/agendar" element={<ProtectedRoute allowedRoles={['guarita']}><GuaritaAgendarPage /></ProtectedRoute>} />
@@ -74,6 +81,7 @@ const App = () => (
                 <Route path="/colaborador/assistente" element={<ProtectedRoute allowedRoles={['colaborador']}><ColaboradorAssistentePage /></ProtectedRoute>} />
                 <Route path="/colaborador/chamados" element={<ProtectedRoute allowedRoles={['colaborador']}><ColaboradorChamadosPage /></ProtectedRoute>} />
                 <Route path="/colaborador/agendamentos" element={<ProtectedRoute allowedRoles={['colaborador']}><ColaboradorAgendamentosPage /></ProtectedRoute>} />
+                <Route path="/colaborador/agentes" element={<ProtectedRoute allowedRoles={['colaborador']}><ColaboradorAgentesPage /></ProtectedRoute>} />
 
                 <Route path="*" element={<NotFound />} />
               </Routes>
