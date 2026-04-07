@@ -40,10 +40,8 @@ Deno.serve(async (req) => {
         const statusId = statuses?.[0]?.id;
         if (statusId) {
           const { data: ticket } = await supabase.from("tickets").insert({
-            title: autoCreateTicket.titulo,
-            description: autoCreateTicket.descricao,
-            created_by: user.id,
-            status_id: statusId,
+            title: autoCreateTicket.titulo, description: autoCreateTicket.descricao,
+            created_by: user.id, status_id: statusId,
           }).select().single();
 
           if (ticket) {
@@ -52,17 +50,13 @@ Deno.serve(async (req) => {
             if (tiUsers) {
               for (const ti of tiUsers) {
                 await adminClient.from("notifications").insert({
-                  user_id: ti.id,
-                  title: "Novo chamado aberto",
-                  message: `${autoCreateTicket.titulo}`,
-                  type: "ticket",
-                  entity_type: "ticket",
-                  entity_id: ticket.id,
+                  user_id: ti.id, title: "Novo chamado aberto",
+                  message: `${autoCreateTicket.titulo}`, type: "ticket",
+                  entity_type: "ticket", entity_id: ticket.id,
                 });
               }
             }
           }
-
           return new Response(JSON.stringify({ message: "Chamado criado com sucesso! O time de TI foi notificado." }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" } });
         }
@@ -76,6 +70,7 @@ Deno.serve(async (req) => {
 
     let systemPrompt = "";
     let model = "google/gemini-2.5-flash";
+    let useCustomApiKey: string | null = null;
 
     // If using a custom agent
     if (agentId) {
@@ -86,6 +81,11 @@ Deno.serve(async (req) => {
 
       model = agent.model || "google/gemini-2.5-flash";
       systemPrompt = agent.system_prompt || "Você é um assistente útil.";
+
+      // Check if agent has its own API key
+      if (agent.api_key && agent.api_provider === 'openai') {
+        useCustomApiKey = agent.api_key;
+      }
 
       // Add DB context if agent has access
       if (agent.db_access_level !== 'none') {
@@ -138,7 +138,7 @@ Deno.serve(async (req) => {
 
       systemPrompt = `Você é o Assistente IA do Painel TI da Esquadromil. Você tem acesso a todos os dados do sistema.
 Responda perguntas sobre chamados, usuários, agendamentos. Forneça análises e resumos. Seja direto e preciso.
-Quando receber imagens, analise-as detalhadamente. Quando receber PDFs ou documentos, extraia e analise o conteúdo.
+Quando receber imagens, analise-as detalhadamente.
 
 DADOS DO SISTEMA EM TEMPO REAL:
 
@@ -162,22 +162,35 @@ ${knowledgeContext || 'Vazia.'}`;
       }
 
       systemPrompt = `Você é o Assistente TI da Esquadromil. Ajude colaboradores com problemas técnicos.
-Forneça soluções práticas. Quando receber imagens (prints de erro, fotos de equipamentos), analise-as para diagnosticar o problema.
+Forneça soluções práticas. Quando receber imagens (prints de erro), analise-as para diagnosticar o problema.
 Quando necessário, sugira abrir chamado com JSON:
 \`\`\`json
 {"sugerir_chamado": true, "titulo": "...", "descricao": "..."}
 \`\`\`${knowledgeContext}`;
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      return new Response(JSON.stringify({ error: "Chave de API da IA não configurada." }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    // Determine API endpoint and key
+    let apiUrl: string;
+    let apiKey: string;
+
+    if (useCustomApiKey) {
+      // Use OpenAI directly with agent's own API key
+      apiUrl = "https://api.openai.com/v1/chat/completions";
+      apiKey = useCustomApiKey;
+    } else {
+      // Use Lovable AI Gateway
+      const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+      if (!LOVABLE_API_KEY) {
+        return new Response(JSON.stringify({ error: "Chave de API da IA não configurada." }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      apiUrl = "https://ai.gateway.lovable.dev/v1/chat/completions";
+      apiKey = LOVABLE_API_KEY;
     }
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const response = await fetch(apiUrl, {
       method: "POST",
-      headers: { "Authorization": `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+      headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         model,
         messages: [{ role: "system", content: systemPrompt }, ...messages],
@@ -189,9 +202,9 @@ Quando necessário, sugira abrir chamado com JSON:
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("AI Gateway error:", response.status, errorText);
-      if (response.status === 429) return new Response(JSON.stringify({ error: "Limite de requisições atingido. Aguarde um momento e tente novamente." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      if (response.status === 402) return new Response(JSON.stringify({ error: "Créditos de IA esgotados." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      console.error("AI API error:", response.status, errorText);
+      if (response.status === 429) return new Response(JSON.stringify({ error: "Limite de requisições atingido." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      if (response.status === 402) return new Response(JSON.stringify({ error: "Créditos esgotados." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       return new Response(JSON.stringify({ error: "Erro ao conectar com a IA." }), { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
