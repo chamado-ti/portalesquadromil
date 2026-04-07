@@ -86,6 +86,8 @@ export type Database = {
       }
       ai_agents: {
         Row: {
+          api_key: string | null
+          api_provider: string
           created_at: string
           created_by: string | null
           db_access_level: string
@@ -100,6 +102,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          api_key?: string | null
+          api_provider?: string
           created_at?: string
           created_by?: string | null
           db_access_level?: string
@@ -114,6 +118,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          api_key?: string | null
+          api_provider?: string
           created_at?: string
           created_by?: string | null
           db_access_level?: string
@@ -281,6 +287,56 @@ export type Database = {
         }
         Relationships: []
       }
+      audit_items: {
+        Row: {
+          auditor_id: string | null
+          checklist: Json | null
+          created_at: string | null
+          evidence_urls: string[] | null
+          id: string
+          notes: string | null
+          process_id: string | null
+          report_url: string | null
+          status: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          auditor_id?: string | null
+          checklist?: Json | null
+          created_at?: string | null
+          evidence_urls?: string[] | null
+          id?: string
+          notes?: string | null
+          process_id?: string | null
+          report_url?: string | null
+          status?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          auditor_id?: string | null
+          checklist?: Json | null
+          created_at?: string | null
+          evidence_urls?: string[] | null
+          id?: string
+          notes?: string | null
+          process_id?: string | null
+          report_url?: string | null
+          status?: string | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_items_process_id_fkey"
+            columns: ["process_id"]
+            isOneToOne: false
+            referencedRelation: "processes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_logs: {
         Row: {
           action: string
@@ -313,6 +369,137 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      kanban_boards: {
+        Row: {
+          allowed_sectors: string[] | null
+          allowed_users: string[] | null
+          created_at: string | null
+          created_by: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          allowed_sectors?: string[] | null
+          allowed_users?: string[] | null
+          created_at?: string | null
+          created_by: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          allowed_sectors?: string[] | null
+          allowed_users?: string[] | null
+          created_at?: string | null
+          created_by?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      kanban_cards: {
+        Row: {
+          assigned_to: string | null
+          board_id: string
+          column_id: string
+          created_at: string | null
+          created_by: string
+          description: string | null
+          due_date: string | null
+          id: string
+          priority: string | null
+          sort_order: number | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          board_id: string
+          column_id: string
+          created_at?: string | null
+          created_by: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          priority?: string | null
+          sort_order?: number | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_to?: string | null
+          board_id?: string
+          column_id?: string
+          created_at?: string | null
+          created_by?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          priority?: string | null
+          sort_order?: number | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kanban_cards_board_id_fkey"
+            columns: ["board_id"]
+            isOneToOne: false
+            referencedRelation: "kanban_boards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kanban_cards_column_id_fkey"
+            columns: ["column_id"]
+            isOneToOne: false
+            referencedRelation: "kanban_columns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kanban_columns: {
+        Row: {
+          board_id: string
+          color: string | null
+          created_at: string | null
+          id: string
+          name: string
+          sort_order: number | null
+        }
+        Insert: {
+          board_id: string
+          color?: string | null
+          created_at?: string | null
+          id?: string
+          name: string
+          sort_order?: number | null
+        }
+        Update: {
+          board_id?: string
+          color?: string | null
+          created_at?: string | null
+          id?: string
+          name?: string
+          sort_order?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kanban_columns_board_id_fkey"
+            columns: ["board_id"]
+            isOneToOne: false
+            referencedRelation: "kanban_boards"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       module_settings: {
         Row: {
@@ -389,6 +576,45 @@ export type Database = {
         }
         Relationships: []
       }
+      processes: {
+        Row: {
+          allowed_viewers: string[] | null
+          created_at: string | null
+          created_by: string
+          description: string | null
+          id: string
+          name: string
+          status: string | null
+          steps: Json | null
+          updated_at: string | null
+          version: number | null
+        }
+        Insert: {
+          allowed_viewers?: string[] | null
+          created_at?: string | null
+          created_by: string
+          description?: string | null
+          id?: string
+          name: string
+          status?: string | null
+          steps?: Json | null
+          updated_at?: string | null
+          version?: number | null
+        }
+        Update: {
+          allowed_viewers?: string[] | null
+          created_at?: string | null
+          created_by?: string
+          description?: string | null
+          id?: string
+          name?: string
+          status?: string | null
+          steps?: Json | null
+          updated_at?: string | null
+          version?: number | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -427,6 +653,59 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      risk_assessments: {
+        Row: {
+          ai_analysis: Json | null
+          category: string | null
+          created_at: string | null
+          created_by: string
+          description: string | null
+          id: string
+          mitigation: string | null
+          process_id: string | null
+          risk_level: string | null
+          status: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          ai_analysis?: Json | null
+          category?: string | null
+          created_at?: string | null
+          created_by: string
+          description?: string | null
+          id?: string
+          mitigation?: string | null
+          process_id?: string | null
+          risk_level?: string | null
+          status?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          ai_analysis?: Json | null
+          category?: string | null
+          created_at?: string | null
+          created_by?: string
+          description?: string | null
+          id?: string
+          mitigation?: string | null
+          process_id?: string | null
+          risk_level?: string | null
+          status?: string | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "risk_assessments_process_id_fkey"
+            columns: ["process_id"]
+            isOneToOne: false
+            referencedRelation: "processes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       sectors: {
         Row: {
@@ -544,6 +823,45 @@ export type Database = {
           status?: string
           title?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      ti_files: {
+        Row: {
+          content: string | null
+          created_at: string | null
+          created_by: string
+          description: string | null
+          file_type: string | null
+          file_url: string | null
+          folder: string | null
+          id: string
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string | null
+          created_by: string
+          description?: string | null
+          file_type?: string | null
+          file_url?: string | null
+          folder?: string | null
+          id?: string
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          content?: string | null
+          created_at?: string | null
+          created_by?: string
+          description?: string | null
+          file_type?: string | null
+          file_url?: string | null
+          folder?: string | null
+          id?: string
+          name?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
