@@ -10,7 +10,6 @@ import React, { Suspense } from "react";
 
 // Public pages (keep eager)
 import Landing from "./pages/Landing";
-import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 
 // Lazy load all dashboard pages
@@ -25,6 +24,9 @@ const TIAssistentePage = React.lazy(() => import("./pages/ti/TIAssistentePage"))
 const TIAgentesPage = React.lazy(() => import("./pages/ti/TIAgentesPage"));
 const TIModulosPage = React.lazy(() => import("./pages/ti/TIModulosPage"));
 const TITarefasPage = React.lazy(() => import("./pages/ti/TITarefasPage"));
+const TIKanbanPage = React.lazy(() => import("./pages/ti/TIKanbanPage"));
+const TIArquivosPage = React.lazy(() => import("./pages/ti/TIArquivosPage"));
+const TIProcessosPage = React.lazy(() => import("./pages/ti/TIProcessosPage"));
 
 const GuaritaDashboard = React.lazy(() => import("./pages/guarita/GuaritaDashboard"));
 const GuaritaQRCodePage = React.lazy(() => import("./pages/guarita/GuaritaQRCodePage"));
@@ -58,7 +60,7 @@ const App = () => (
             <Suspense fallback={null}>
               <Routes>
                 <Route path="/" element={<Landing />} />
-                <Route path="/login" element={<Login />} />
+                <Route path="/login" element={<Landing />} />
 
                 <Route path="/ti" element={<ProtectedRoute allowedRoles={['ti']}><TIDashboard /></ProtectedRoute>} />
                 <Route path="/ti/usuarios" element={<ProtectedRoute allowedRoles={['ti']}><TIUsuariosPage /></ProtectedRoute>} />
@@ -71,6 +73,9 @@ const App = () => (
                 <Route path="/ti/agentes" element={<ProtectedRoute allowedRoles={['ti']}><TIAgentesPage /></ProtectedRoute>} />
                 <Route path="/ti/modulos" element={<ProtectedRoute allowedRoles={['ti']}><TIModulosPage /></ProtectedRoute>} />
                 <Route path="/ti/tarefas" element={<ProtectedRoute allowedRoles={['ti']}><TITarefasPage /></ProtectedRoute>} />
+                <Route path="/ti/kanban" element={<ProtectedRoute allowedRoles={['ti']}><TIKanbanPage /></ProtectedRoute>} />
+                <Route path="/ti/arquivos" element={<ProtectedRoute allowedRoles={['ti']}><TIArquivosPage /></ProtectedRoute>} />
+                <Route path="/ti/processos" element={<ProtectedRoute allowedRoles={['ti']}><TIProcessosPage /></ProtectedRoute>} />
 
                 <Route path="/guarita" element={<ProtectedRoute allowedRoles={['guarita']}><GuaritaDashboard /></ProtectedRoute>} />
                 <Route path="/guarita/agendar" element={<ProtectedRoute allowedRoles={['guarita']}><GuaritaAgendarPage /></ProtectedRoute>} />
