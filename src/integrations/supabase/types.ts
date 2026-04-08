@@ -84,6 +84,79 @@ export type Database = {
           },
         ]
       }
+      ai_agent_modules: {
+        Row: {
+          agent_id: string
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          module_key: string
+        }
+        Insert: {
+          agent_id: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          module_key: string
+        }
+        Update: {
+          agent_id?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          module_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_agent_modules_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "ai_agents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_agent_skills: {
+        Row: {
+          agent_id: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          is_shared: boolean | null
+          name: string
+          parameters: Json | null
+          updated_at: string | null
+        }
+        Insert: {
+          agent_id?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_shared?: boolean | null
+          name: string
+          parameters?: Json | null
+          updated_at?: string | null
+        }
+        Update: {
+          agent_id?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_shared?: boolean | null
+          name?: string
+          parameters?: Json | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_agent_skills_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "ai_agents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_agents: {
         Row: {
           api_key: string | null
@@ -93,6 +166,7 @@ export type Database = {
           db_access_level: string
           db_tables: string[] | null
           description: string | null
+          icon: string | null
           id: string
           is_active: boolean
           memory_enabled: boolean
@@ -109,6 +183,7 @@ export type Database = {
           db_access_level?: string
           db_tables?: string[] | null
           description?: string | null
+          icon?: string | null
           id?: string
           is_active?: boolean
           memory_enabled?: boolean
@@ -125,6 +200,7 @@ export type Database = {
           db_access_level?: string
           db_tables?: string[] | null
           description?: string | null
+          icon?: string | null
           id?: string
           is_active?: boolean
           memory_enabled?: boolean

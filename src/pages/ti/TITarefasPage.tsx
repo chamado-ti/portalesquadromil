@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { DashboardLayout } from '@/components/layouts/DashboardLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -9,12 +9,12 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Plus, Trash2, Loader2, Calendar, GripVertical, MessageSquare } from 'lucide-react';
+import { Plus, Trash2, Loader2, Calendar, Clock, AlertCircle } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { format } from 'date-fns';
+import { format, isPast, isToday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 
@@ -25,16 +25,16 @@ interface Task {
 }
 
 const COLUMNS = [
-  { id: 'todo', label: 'A Fazer', color: 'bg-muted' },
-  { id: 'in_progress', label: 'Em Andamento', color: 'bg-blue-500/10' },
-  { id: 'done', label: 'Concluído', color: 'bg-green-500/10' },
+  { id: 'todo', label: 'A Fazer', color: 'border-l-muted-foreground/30' },
+  { id: 'in_progress', label: 'Em Andamento', color: 'border-l-blue-500' },
+  { id: 'done', label: 'Concluído', color: 'border-l-green-500' },
 ];
 
 const PRIORITIES = [
-  { value: 'low', label: 'Baixa', color: 'text-muted-foreground' },
-  { value: 'medium', label: 'Média', color: 'text-yellow-600' },
-  { value: 'high', label: 'Alta', color: 'text-orange-600' },
-  { value: 'urgent', label: 'Urgente', color: 'text-destructive' },
+  { value: 'low', label: 'Baixa', bg: 'bg-muted text-muted-foreground' },
+  { value: 'medium', label: 'Média', bg: 'bg-yellow-500/10 text-yellow-600' },
+  { value: 'high', label: 'Alta', bg: 'bg-orange-500/10 text-orange-600' },
+  { value: 'urgent', label: 'Urgente', bg: 'bg-destructive/10 text-destructive' },
 ];
 
 const emptyForm = { title: '', description: '', priority: 'medium', due_date: '', assigned_to: '', sector: '' };
@@ -112,6 +112,11 @@ export default function TITarefasPage() {
 
   const getUserName = (id: string | null) => users.find(u => u.id === id)?.full_name || '—';
 
+  const isOverdue = (dueDate: string | null) => {
+    if (!dueDate) return false;
+    return isPast(new Date(dueDate)) && !isToday(new Date(dueDate));
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -133,34 +138,42 @@ export default function TITarefasPage() {
               const colTasks = tasks.filter(t => t.status === col.id);
               return (
                 <div key={col.id} className="space-y-3">
-                  <div className={cn('flex items-center justify-between rounded-lg px-3 py-2', col.color)}>
+                  <div className="flex items-center justify-between rounded-lg px-3 py-2 bg-muted/50">
                     <h3 className="font-semibold text-sm">{col.label}</h3>
-                    <Badge variant="secondary">{colTasks.length}</Badge>
+                    <Badge variant="secondary" className="text-xs">{colTasks.length}</Badge>
                   </div>
                   <ScrollArea className="h-[calc(100vh-18rem)]">
                     <div className="space-y-2 pr-2">
                       {colTasks.map(task => {
                         const pri = PRIORITIES.find(p => p.value === task.priority);
+                        const overdue = isOverdue(task.due_date) && task.status !== 'done';
                         return (
-                          <Card key={task.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => openEdit(task)}>
+                          <Card key={task.id}
+                            className={cn(
+                              'cursor-pointer border-l-4 hover:shadow-md transition-all',
+                              col.color,
+                              overdue && 'border-l-destructive'
+                            )}
+                            onClick={() => openEdit(task)}>
                             <CardContent className="p-3 space-y-2">
                               <div className="flex items-start justify-between">
                                 <p className="font-medium text-sm line-clamp-2">{task.title}</p>
-                                <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={e => { e.stopPropagation(); deleteMutation.mutate(task.id); }}>
+                                <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100" onClick={e => { e.stopPropagation(); deleteMutation.mutate(task.id); }}>
                                   <Trash2 className="h-3 w-3" />
                                 </Button>
                               </div>
                               {task.description && <p className="text-xs text-muted-foreground line-clamp-2">{task.description}</p>}
                               <div className="flex flex-wrap items-center gap-1.5">
-                                <Badge variant="outline" className={cn('text-[10px]', pri?.color)}>{pri?.label}</Badge>
+                                <Badge className={cn('text-[10px] border-0', pri?.bg)}>{pri?.label}</Badge>
                                 {task.due_date && (
-                                  <Badge variant="outline" className="text-[10px]">
-                                    <Calendar className="mr-1 h-2.5 w-2.5" />{format(new Date(task.due_date), 'dd/MM', { locale: ptBR })}
+                                  <Badge variant="outline" className={cn('text-[10px] gap-0.5', overdue && 'border-destructive text-destructive')}>
+                                    {overdue && <AlertCircle className="h-2.5 w-2.5" />}
+                                    <Calendar className="h-2.5 w-2.5" />
+                                    {format(new Date(task.due_date), 'dd/MM', { locale: ptBR })}
                                   </Badge>
                                 )}
                                 {task.assigned_to && <Badge variant="secondary" className="text-[10px]">{getUserName(task.assigned_to)}</Badge>}
                               </div>
-                              {/* Quick status buttons */}
                               <div className="flex gap-1 pt-1">
                                 {COLUMNS.filter(c => c.id !== task.status).map(c => (
                                   <Button key={c.id} variant="ghost" size="sm" className="h-6 text-[10px] px-2"
