@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Bot, Send, Trash2, User, Plus, MessageSquare, Paperclip, X, FileText, Image as ImageIcon, Mic } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import ReactMarkdown from 'react-markdown';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -68,11 +69,11 @@ export function ChatInterface({
   title, subtitle, quickPrompts, renderTicketActions,
 }: ChatInterfaceProps) {
   const [pendingFiles, setPendingFiles] = useState<FileAttachment[]>([]);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Auto-scroll on new messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isLoading]);
@@ -81,7 +82,7 @@ export function ChatInterface({
     const fileArr = Array.from(files);
     const attachments: FileAttachment[] = [];
     for (const file of fileArr) {
-      if (file.size > 10 * 1024 * 1024) continue; // 10MB max
+      if (file.size > 10 * 1024 * 1024) continue;
       try {
         const base64 = await fileToBase64(file);
         attachments.push({ type: getFileType(file.type), name: file.name, base64, mimeType: file.type });
@@ -90,7 +91,6 @@ export function ChatInterface({
     if (attachments.length > 0) setPendingFiles(prev => [...prev, ...attachments]);
   }, []);
 
-  // Paste handler (Ctrl+V)
   const handlePaste = useCallback(async (e: React.ClipboardEvent) => {
     const items = e.clipboardData.items;
     const files: File[] = [];
@@ -132,6 +132,14 @@ export function ChatInterface({
     return <FileText className="h-3 w-3" />;
   };
 
+  const confirmDelete = (id: string) => setDeleteConfirmId(id);
+  const handleConfirmDelete = () => {
+    if (deleteConfirmId) {
+      onDeleteConversation(deleteConfirmId);
+      setDeleteConfirmId(null);
+    }
+  };
+
   return (
     <div className="flex h-[calc(100vh-8rem)] gap-4">
       {/* Sidebar */}
@@ -146,7 +154,7 @@ export function ChatInterface({
               <div key={conv.id} className={cn('group flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-accent', activeConversationId === conv.id && 'bg-accent')} onClick={() => onSelectConversation(conv)}>
                 <MessageSquare className="h-4 w-4 shrink-0 text-muted-foreground" />
                 <span className="flex-1 truncate">{conv.title}</span>
-                <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100" onClick={e => { e.stopPropagation(); onDeleteConversation(conv.id); }}>
+                <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100" onClick={e => { e.stopPropagation(); confirmDelete(conv.id); }}>
                   <Trash2 className="h-3 w-3" />
                 </Button>
               </div>
@@ -191,7 +199,6 @@ export function ChatInterface({
                     {msg.role === 'user' ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
                   </div>
                   <div className={`max-w-[80%] rounded-xl p-3 ${msg.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-                    {/* Show attachments */}
                     {msg.attachments && msg.attachments.length > 0 && (
                       <div className="mb-2 flex flex-wrap gap-2">
                         {msg.attachments.map((att, i) => (
@@ -266,6 +273,24 @@ export function ChatInterface({
           </div>
         </div>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deleteConfirmId} onOpenChange={open => !open && setDeleteConfirmId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir conversa?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação é permanente. A conversa será removida definitivamente do sistema.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
