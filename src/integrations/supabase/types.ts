@@ -446,6 +446,200 @@ export type Database = {
         }
         Relationships: []
       }
+      group_messages: {
+        Row: {
+          attachments: string[] | null
+          content: string
+          created_at: string
+          edited_at: string | null
+          group_id: string
+          id: string
+          is_deleted: boolean
+          is_pinned: boolean
+          pin_expires_at: string | null
+          sender_id: string
+          tag_mention: string | null
+        }
+        Insert: {
+          attachments?: string[] | null
+          content: string
+          created_at?: string
+          edited_at?: string | null
+          group_id: string
+          id?: string
+          is_deleted?: boolean
+          is_pinned?: boolean
+          pin_expires_at?: string | null
+          sender_id: string
+          tag_mention?: string | null
+        }
+        Update: {
+          attachments?: string[] | null
+          content?: string
+          created_at?: string
+          edited_at?: string | null
+          group_id?: string
+          id?: string
+          is_deleted?: boolean
+          is_pinned?: boolean
+          pin_expires_at?: string | null
+          sender_id?: string
+          tag_mention?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_messages_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_messages_tag_mention_fkey"
+            columns: ["tag_mention"]
+            isOneToOne: false
+            referencedRelation: "group_tags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      group_tag_members: {
+        Row: {
+          created_at: string
+          id: string
+          tag_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          tag_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          tag_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_tag_members_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "group_tags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      group_tags: {
+        Row: {
+          color: string
+          created_at: string
+          group_id: string
+          id: string
+          name: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          group_id: string
+          id?: string
+          name: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          group_id?: string
+          id?: string
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_tags_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      group_tickets: {
+        Row: {
+          created_at: string
+          id: string
+          message_id: string
+          tag_id: string
+          ticket_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message_id: string
+          tag_id: string
+          ticket_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message_id?: string
+          tag_id?: string
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_tickets_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "group_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_tickets_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "group_tags"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_tickets_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      groups: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       kanban_boards: {
         Row: {
           allowed_sectors: string[] | null

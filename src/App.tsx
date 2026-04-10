@@ -27,6 +27,7 @@ const TITarefasPage = React.lazy(() => import("./pages/ti/TITarefasPage"));
 const TIKanbanPage = React.lazy(() => import("./pages/ti/TIKanbanPage"));
 const TIArquivosPage = React.lazy(() => import("./pages/ti/TIArquivosPage"));
 const TIProcessosPage = React.lazy(() => import("./pages/ti/TIProcessosPage"));
+const TIGruposPage = React.lazy(() => import("./pages/ti/TIGruposPage"));
 
 const GuaritaDashboard = React.lazy(() => import("./pages/guarita/GuaritaDashboard"));
 const GuaritaQRCodePage = React.lazy(() => import("./pages/guarita/GuaritaQRCodePage"));
@@ -38,6 +39,7 @@ const ColaboradorAssistentePage = React.lazy(() => import("./pages/colaborador/C
 const ColaboradorChamadosPage = React.lazy(() => import("./pages/colaborador/ColaboradorChamadosPage"));
 const ColaboradorAgendamentosPage = React.lazy(() => import("./pages/colaborador/ColaboradorAgendamentosPage"));
 const ColaboradorAgentesPage = React.lazy(() => import("./pages/colaborador/ColaboradorAgentesPage"));
+const ColaboradorGruposPage = React.lazy(() => import("./pages/colaborador/ColaboradorGruposPage"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -76,6 +78,7 @@ const App = () => (
                 <Route path="/ti/kanban" element={<ProtectedRoute allowedRoles={['ti']}><TIKanbanPage /></ProtectedRoute>} />
                 <Route path="/ti/arquivos" element={<ProtectedRoute allowedRoles={['ti']}><TIArquivosPage /></ProtectedRoute>} />
                 <Route path="/ti/processos" element={<ProtectedRoute allowedRoles={['ti']}><TIProcessosPage /></ProtectedRoute>} />
+                <Route path="/ti/grupos" element={<ProtectedRoute allowedRoles={['ti']}><TIGruposPage /></ProtectedRoute>} />
 
                 <Route path="/guarita" element={<ProtectedRoute allowedRoles={['guarita']}><GuaritaDashboard /></ProtectedRoute>} />
                 <Route path="/guarita/agendar" element={<ProtectedRoute allowedRoles={['guarita']}><GuaritaAgendarPage /></ProtectedRoute>} />
@@ -87,6 +90,7 @@ const App = () => (
                 <Route path="/colaborador/chamados" element={<ProtectedRoute allowedRoles={['colaborador']}><ColaboradorChamadosPage /></ProtectedRoute>} />
                 <Route path="/colaborador/agendamentos" element={<ProtectedRoute allowedRoles={['colaborador']}><ColaboradorAgendamentosPage /></ProtectedRoute>} />
                 <Route path="/colaborador/agentes" element={<ProtectedRoute allowedRoles={['colaborador']}><ColaboradorAgentesPage /></ProtectedRoute>} />
+                <Route path="/colaborador/grupos" element={<ProtectedRoute allowedRoles={['colaborador']}><ColaboradorGruposPage /></ProtectedRoute>} />
 
                 <Route path="*" element={<NotFound />} />
               </Routes>
