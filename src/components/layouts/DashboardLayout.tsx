@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Ticket, Calendar, Bell, LogOut, Menu, ChevronLeft,
   FileText, Bot, QrCode, Settings, History, BarChart3, Trash2,
-  Blocks, ListTodo, Cpu, LayoutGrid, FolderOpen, GitBranch, Plus,
+  Blocks, ListTodo, Cpu, LayoutGrid, FolderOpen, GitBranch, Plus, MessageSquare,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -34,6 +34,7 @@ const navItems: NavItem[] = [
   { label: 'Agentes IA', href: '/ti/agentes', icon: Cpu, roles: ['ti'] },
   { label: 'Arquivos', href: '/ti/arquivos', icon: FolderOpen, roles: ['ti'] },
   { label: 'Processos', href: '/ti/processos', icon: GitBranch, roles: ['ti'] },
+  { label: 'Grupos', href: '/ti/grupos', icon: MessageSquare, roles: ['ti'] },
   { label: 'Módulos', href: '/ti/modulos', icon: Blocks, roles: ['ti'] },
   { label: 'Logs', href: '/ti/logs', icon: FileText, roles: ['ti'] },
   { label: 'Relatórios', href: '/ti/relatorios', icon: BarChart3, roles: ['ti'] },
