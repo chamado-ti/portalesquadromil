@@ -6,7 +6,7 @@ import { useAIAssistant, ChatMessage, FileAttachment } from '@/hooks/useAIAssist
 
 export default function TIAssistentePage() {
   const { messages, isLoading, sendMessage, clearMessages, setMessages } = useAIAssistant();
-  const { conversations, createConversation, updateConversation, deleteConversation } = useAIConversations();
+  const { conversations, createConversation, updateConversation, deleteConversation, refetch } = useAIConversations();
   const [inputValue, setInputValue] = useState('');
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
 
@@ -44,9 +44,17 @@ export default function TIAssistentePage() {
 
   const handleDeleteConv = async (id: string) => {
     try {
+      // Clear UI immediately if deleting active conversation
+      if (activeConversationId === id) {
+        setActiveConversationId(null);
+        clearMessages();
+      }
       await deleteConversation(id);
-      if (activeConversationId === id) { setActiveConversationId(null); clearMessages(); }
-    } catch (err) { console.error('Delete error:', err); }
+      // Force refetch to ensure clean state
+      await refetch();
+    } catch (err) {
+      console.error('Delete error:', err);
+    }
   };
 
   const handleSend = async (attachments?: FileAttachment[]) => {

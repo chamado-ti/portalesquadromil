@@ -25,7 +25,7 @@ export interface AIConversation {
 }
 
 export function useAIConversations() {
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -92,18 +92,48 @@ export function useAIConversations() {
 
   const deleteConversationMutation = useMutation({
     mutationFn: async (id: string) => {
+      // Hard delete - remove permanently from database
       const { error } = await supabase
         .from('ai_conversations')
         .delete()
         .eq('id', id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Delete conversation error:', error);
+        throw new Error('Não foi possível excluir a conversa. ' + error.message);
+      }
+    },
+    onMutate: async (deletedId) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['ai-conversations'] });
+      
+      // Snapshot the previous value
+      const previousConversations = queryClient.getQueryData(['ai-conversations', user?.id]);
+      
+      // Optimistically remove from cache immediately
+      queryClient.setQueryData(['ai-conversations', user?.id], (old: AIConversation[] | undefined) => {
+        return (old || []).filter(conv => conv.id !== deletedId);
+      });
+      
+      return { previousConversations };
+    },
+    onError: (_err, _id, context) => {
+      // Rollback on error
+      if (context?.previousConversations) {
+        queryClient.setQueryData(['ai-conversations', user?.id], context.previousConversations);
+      }
+      toast({
+        variant: 'destructive',
+        title: 'Erro ao excluir',
+        description: 'Não foi possível excluir a conversa.',
+      });
     },
     onSuccess: () => {
+      // Force refetch to ensure consistency
       queryClient.invalidateQueries({ queryKey: ['ai-conversations'] });
       toast({
         title: 'Conversa excluída',
-        description: 'A conversa foi removida do histórico.',
+        description: 'A conversa foi removida permanentemente.',
       });
     },
   });

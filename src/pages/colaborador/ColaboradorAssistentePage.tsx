@@ -56,8 +56,11 @@ export default function ColaboradorAssistentePage() {
 
   const handleDeleteConv = async (id: string) => {
     try {
+      if (activeConversationId === id) {
+        setActiveConversationId(null);
+        clearMessages();
+      }
       await deleteConversation(id);
-      if (activeConversationId === id) { setActiveConversationId(null); clearMessages(); }
     } catch (err) { console.error('Delete error:', err); }
   };
 
