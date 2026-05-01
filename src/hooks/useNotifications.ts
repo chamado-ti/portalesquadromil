@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
 import { useEffect } from 'react';
 
 export interface Notification {
@@ -17,6 +18,7 @@ export interface Notification {
 
 export function useNotifications() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const notificationsQuery = useQuery({
@@ -77,22 +79,44 @@ export function useNotifications() {
     },
   });
 
-  // Realtime subscription for notifications
+  // Realtime: insert / update / delete with optimistic cache + toast
   useEffect(() => {
     if (!user?.id) return;
     const channel = supabase
-      .channel('user-notifications')
+      .channel(`user-notifications-${user.id}`)
       .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'notifications',
+        event: 'INSERT', schema: 'public', table: 'notifications',
         filter: `user_id=eq.${user.id}`,
-      }, () => {
-        queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      }, (payload) => {
+        const n = payload.new as Notification;
+        queryClient.setQueryData(['notifications', user.id], (old: Notification[] | undefined) => {
+          const list = old || [];
+          if (list.some(x => x.id === n.id)) return list;
+          return [n, ...list];
+        });
+        toast({ title: n.title, description: n.message });
+      })
+      .on('postgres_changes', {
+        event: 'UPDATE', schema: 'public', table: 'notifications',
+        filter: `user_id=eq.${user.id}`,
+      }, (payload) => {
+        const n = payload.new as Notification;
+        queryClient.setQueryData(['notifications', user.id], (old: Notification[] | undefined) =>
+          (old || []).map(x => x.id === n.id ? n : x)
+        );
+      })
+      .on('postgres_changes', {
+        event: 'DELETE', schema: 'public', table: 'notifications',
+        filter: `user_id=eq.${user.id}`,
+      }, (payload) => {
+        const id = (payload.old as Notification).id;
+        queryClient.setQueryData(['notifications', user.id], (old: Notification[] | undefined) =>
+          (old || []).filter(x => x.id !== id)
+        );
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [user?.id, queryClient]);
+  }, [user?.id, queryClient, toast]);
 
   const notifications = notificationsQuery.data ?? [];
   const unreadCount = notifications.filter(n => !n.read).length;

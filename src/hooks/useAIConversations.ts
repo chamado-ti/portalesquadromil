@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { logAudit } from '@/lib/auditLog';
 
 export interface AIMessage {
   id: string;
@@ -102,6 +103,7 @@ export function useAIConversations() {
         console.error('Delete conversation error:', error);
         throw new Error('Não foi possível excluir a conversa. ' + error.message);
       }
+      await logAudit('ai_conversation.delete', 'ai_conversation', id);
     },
     onMutate: async (deletedId) => {
       // Cancel any outgoing refetches
