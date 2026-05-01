@@ -173,37 +173,12 @@ function GroupChatView({ group, onBack, onManageTags, isAdmin }: {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  // Enrich messages with profiles
-  const [enrichedMessages, setEnrichedMessages] = useState<GroupMessage[]>([]);
-
-  useEffect(() => {
-    const enrich = async () => {
-      if (messages.length === 0) { setEnrichedMessages([]); return; }
-      const senderIds = [...new Set(messages.map(m => m.sender_id))];
-      const tagIds = [...new Set(messages.filter(m => m.tag_mention).map(m => m.tag_mention!))];
-
-      const [profilesRes, tagsRes] = await Promise.all([
-        supabase.from('profiles').select('id, full_name, avatar_url').in('id', senderIds),
-        tagIds.length > 0 ? supabase.from('group_tags').select('id, name, color').in('id', tagIds) : { data: [] },
-      ]);
-
-      const profileMap = new Map((profilesRes.data || []).map(p => [p.id, p]));
-      const tagMap = new Map(((tagsRes.data || []) as any[]).map(t => [t.id, t]));
-
-      setEnrichedMessages(messages.map(m => ({
-        ...m,
-        sender_name: profileMap.get(m.sender_id)?.full_name || 'Usuário',
-        sender_avatar: profileMap.get(m.sender_id)?.avatar_url || undefined,
-        tag_name: m.tag_mention ? tagMap.get(m.tag_mention)?.name : undefined,
-        tag_color: m.tag_mention ? tagMap.get(m.tag_mention)?.color : undefined,
-      })));
-    };
-    enrich();
-  }, [messages]);
+  // Messages already enriched in the hook (single source of truth)
+  const enrichedMessages = messages;
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [enrichedMessages]);
+  }, [enrichedMessages.length]);
 
   const handleSend = async () => {
     if (!input.trim() || isSending) return;
