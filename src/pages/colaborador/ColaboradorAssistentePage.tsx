@@ -100,7 +100,13 @@ export default function ColaboradorAssistentePage() {
         onInputChange={setInputValue}
         onSend={handleSend}
         onNewChat={handleNewChat}
-        onClear={() => { clearMessages(); setActiveConversationId(null); }}
+        onClear={async () => {
+          if (activeConversationId) {
+            try { await updateConversation({ id: activeConversationId, messages: [] }); } catch {}
+          }
+          clearMessages();
+          setActiveConversationId(null);
+        }}
         conversations={conversations}
         activeConversationId={activeConversationId}
         onSelectConversation={loadConversation}

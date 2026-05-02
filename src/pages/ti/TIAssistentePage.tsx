@@ -77,7 +77,15 @@ export default function TIAssistentePage() {
         onInputChange={setInputValue}
         onSend={handleSend}
         onNewChat={handleNewChat}
-        onClear={() => { clearMessages(); setActiveConversationId(null); }}
+        onClear={async () => {
+          // Se há uma conversa ativa, persiste mensagens vazias para apagar do DB
+          if (activeConversationId) {
+            try { await updateConversation({ id: activeConversationId, messages: [] }); } catch {}
+          }
+          clearMessages();
+          setActiveConversationId(null);
+          await refetch();
+        }}
         conversations={conversations}
         activeConversationId={activeConversationId}
         onSelectConversation={loadConversation}
