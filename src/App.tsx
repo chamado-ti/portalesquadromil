@@ -7,6 +7,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import React, { Suspense } from "react";
+import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 
 // Public pages (keep eager)
 import Landing from "./pages/Landing";
@@ -59,7 +60,11 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <AuthProvider>
-            <Suspense fallback={null}>
+            <Suspense fallback={
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-sm">
+                <LoadingSpinner size="lg" />
+              </div>
+            }>
               <Routes>
                 <Route path="/" element={<Landing />} />
                 <Route path="/login" element={<Landing />} />
