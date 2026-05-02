@@ -197,7 +197,7 @@ export default function ColaboradorChamadosPage() {
                 </div>
                 <div>
                   <Label>Anexos (prints, arquivos)</Label>
-                  <input ref={fileInputRef} type="file" multiple accept="image/*,.pdf,.doc,.docx" className="hidden" onChange={handleFileUpload} />
+                  <input ref={fileInputRef} type="file" multiple accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt" className="hidden" onChange={handleFileUpload} />
                   <Button type="button" variant="outline" size="sm" className="mt-1 w-full" onClick={() => fileInputRef.current?.click()} disabled={isUploading}>
                     {isUploading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Enviando...</> : <><Paperclip className="mr-2 h-4 w-4" /> Anexar arquivo</>}
                   </Button>
