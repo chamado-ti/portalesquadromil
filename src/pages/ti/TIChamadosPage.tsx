@@ -29,6 +29,7 @@ import {
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { AttachmentCardThumbs, AttachmentList } from "@/components/AttachmentPreview";
 
 export default function TIChamadosPage() {
   const {
@@ -248,6 +249,9 @@ export default function TIChamadosPage() {
                               <div className="flex items-center gap-1"><Image className="h-3 w-3" /><span>{ticket.attachments.length}</span></div>
                             )}
                           </div>
+                          {ticket.attachments && ticket.attachments.length > 0 && (
+                            <AttachmentCardThumbs urls={ticket.attachments} max={3} />
+                          )}
                           {ticket.urgency_id && (
                             <Badge variant="outline" className="mt-1.5 text-[10px]" style={{ borderColor: getUrgencyColor(ticket.urgency_id), color: getUrgencyColor(ticket.urgency_id) }}>
                               {getUrgencyName(ticket.urgency_id)}
@@ -295,20 +299,9 @@ export default function TIChamadosPage() {
 
                 {selectedTicket.attachments && selectedTicket.attachments.length > 0 && (
                   <div>
-                    <Label className="text-muted-foreground">Anexos</Label>
-                    <div className="mt-1 flex flex-wrap gap-2">
-                      {selectedTicket.attachments.map((url, i) => {
-                        const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(url);
-                        return isImage ? (
-                          <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-lg border hover:opacity-80 transition-opacity">
-                            <img src={url} alt={`Anexo ${i + 1}`} className="h-20 w-20 object-cover" />
-                          </a>
-                        ) : (
-                          <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-lg border p-2 text-sm text-primary hover:underline">
-                            <Image className="h-4 w-4" /> Anexo {i + 1}
-                          </a>
-                        );
-                      })}
+                    <Label className="text-muted-foreground">Anexos ({selectedTicket.attachments.length})</Label>
+                    <div className="mt-1.5">
+                      <AttachmentList urls={selectedTicket.attachments} size="md" />
                     </div>
                   </div>
                 )}
