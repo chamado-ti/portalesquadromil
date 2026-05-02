@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { AttachmentList } from '@/components/AttachmentPreview';
 
 export default function ColaboradorChamadosPage() {
   const { profile } = useAuth();
@@ -130,16 +131,9 @@ export default function ColaboradorChamadosPage() {
                 {selectedTicket.urgency && <div><Label className="text-muted-foreground">Prioridade</Label><Badge variant="outline" className={getStatusColor(selectedTicket.urgency.color)}>{selectedTicket.urgency.name}</Badge></div>}
                 {selectedTicket.attachments && selectedTicket.attachments.length > 0 && (
                   <div>
-                    <Label className="text-muted-foreground">Anexos</Label>
-                    <div className="mt-1 flex flex-wrap gap-2">
-                      {selectedTicket.attachments.map((url, i) => {
-                        const isImg = /\.(jpg|jpeg|png|gif|webp)$/i.test(url);
-                        return isImg ? (
-                          <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded border"><img src={url} alt={`Anexo ${i+1}`} className="h-16 w-16 object-cover" /></a>
-                        ) : (
-                          <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-sm text-primary hover:underline"><Image className="h-3 w-3" /> Anexo {i+1}</a>
-                        );
-                      })}
+                    <Label className="text-muted-foreground">Anexos ({selectedTicket.attachments.length})</Label>
+                    <div className="mt-1.5">
+                      <AttachmentList urls={selectedTicket.attachments} size="md" />
                     </div>
                   </div>
                 )}
@@ -203,7 +197,7 @@ export default function ColaboradorChamadosPage() {
                 </div>
                 <div>
                   <Label>Anexos (prints, arquivos)</Label>
-                  <input ref={fileInputRef} type="file" multiple accept="image/*,.pdf,.doc,.docx" className="hidden" onChange={handleFileUpload} />
+                  <input ref={fileInputRef} type="file" multiple accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt" className="hidden" onChange={handleFileUpload} />
                   <Button type="button" variant="outline" size="sm" className="mt-1 w-full" onClick={() => fileInputRef.current?.click()} disabled={isUploading}>
                     {isUploading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Enviando...</> : <><Paperclip className="mr-2 h-4 w-4" /> Anexar arquivo</>}
                   </Button>
