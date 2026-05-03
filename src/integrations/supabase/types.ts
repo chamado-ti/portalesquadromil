@@ -457,6 +457,8 @@ export type Database = {
           is_deleted: boolean
           is_pinned: boolean
           pin_expires_at: string | null
+          reactions: Json
+          reply_to_id: string | null
           sender_id: string
           tag_mention: string | null
         }
@@ -470,6 +472,8 @@ export type Database = {
           is_deleted?: boolean
           is_pinned?: boolean
           pin_expires_at?: string | null
+          reactions?: Json
+          reply_to_id?: string | null
           sender_id: string
           tag_mention?: string | null
         }
@@ -483,6 +487,8 @@ export type Database = {
           is_deleted?: boolean
           is_pinned?: boolean
           pin_expires_at?: string | null
+          reactions?: Json
+          reply_to_id?: string | null
           sender_id?: string
           tag_mention?: string | null
         }
@@ -495,6 +501,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "group_messages_reply_to_id_fkey"
+            columns: ["reply_to_id"]
+            isOneToOne: false
+            referencedRelation: "group_messages"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "group_messages_tag_mention_fkey"
             columns: ["tag_mention"]
             isOneToOne: false
@@ -502,6 +515,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      group_reads: {
+        Row: {
+          group_id: string
+          id: string
+          last_read_at: string
+          user_id: string
+        }
+        Insert: {
+          group_id: string
+          id?: string
+          last_read_at?: string
+          user_id: string
+        }
+        Update: {
+          group_id?: string
+          id?: string
+          last_read_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       group_tag_members: {
         Row: {
