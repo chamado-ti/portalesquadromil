@@ -19,6 +19,7 @@ import { useNotifications } from '@/hooks/useNotifications';
 import logoEsquadromil from '@/assets/logo-esquadromil.png';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { prefetchRoute } from '@/lib/routePrefetch';
 
 interface NavItem {
   label: string; href: string; icon: React.ComponentType<{ className?: string }>; roles: AppRole[];
@@ -120,6 +121,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               const NavIcon = item.icon;
               const link = (
                 <Link key={item.href} to={item.href}
+                  onMouseEnter={() => prefetchRoute(item.href)}
+                  onFocus={() => prefetchRoute(item.href)}
+                  onTouchStart={() => prefetchRoute(item.href)}
                   className={cn('flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium transition-colors',
                     isActive ? 'bg-sidebar-accent text-sidebar-accent-foreground' : 'text-sidebar-foreground/80 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground')}>
                   <NavIcon className="h-4 w-4 flex-shrink-0" />
