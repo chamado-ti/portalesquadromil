@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { useGroupMessages, useGroupTags, uploadGroupAttachment, markGroupRead, type Group, type GroupMessage } from '@/hooks/useGroups';
 import { useAuth } from '@/contexts/AuthContext';
-import { AttachmentPreview, AttachmentPreviewDialog, getAttachmentKind } from '@/components/AttachmentPreview';
+import { AttachmentPreviewDialog, getAttachmentKind } from '@/components/AttachmentPreview';
 import { format, isToday, isYesterday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
