@@ -24,12 +24,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import {
   Search, MessageSquare, User, Calendar, Clock, Send, AlertCircle, RefreshCw,
-  Ticket as TicketIcon, Download, Plus, Trash2, Image, Upload,
+  Ticket as TicketIcon, Download, Plus, Trash2, Image, Upload, FileSpreadsheet,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { AttachmentCardThumbs, AttachmentList } from "@/components/AttachmentPreview";
+import * as XLSX from "xlsx";
+
+const RESOLUTION_TYPES = ["Configuração", "Manutenção", "Hardware", "Software", "Rede", "Acesso/Senha", "Treinamento", "Outro"];
+const FINAL_STATUS_NAMES = ["Finalizado", "Resolvido pelo colaborador"];
 
 export default function TIChamadosPage() {
   const {
