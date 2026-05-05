@@ -54,6 +54,7 @@ const navItems: NavItem[] = [
   { label: 'Meus Agentes', href: '/colaborador/agentes', icon: Cpu, roles: ['colaborador'] },
   { label: 'Meus Chamados', href: '/colaborador/chamados', icon: Ticket, roles: ['colaborador'] },
   { label: 'Agendamentos', href: '/colaborador/agendamentos', icon: Calendar, roles: ['colaborador'] },
+  { label: 'Solicitar à Guarita', href: '/colaborador/solicitar', icon: Plus, roles: ['colaborador'] },
   { label: 'Grupos', href: '/colaborador/grupos', icon: MessageSquare, roles: ['colaborador'] },
 ];
 
