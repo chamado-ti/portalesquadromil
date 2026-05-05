@@ -258,6 +258,22 @@ export default function TIUsuariosPage() {
                 </div>
 
                 <div className="rounded-lg border p-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-semibold">Senha de Acesso</h4>
+                    <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setShowPassword(s => !s)}>
+                      <Eye className="mr-1 h-3 w-3" />{showPassword ? 'Ocultar' : 'Ver'}
+                    </Button>
+                  </div>
+                  {showPassword ? (
+                    <p className="mt-1 font-mono text-sm">
+                      {(detailUser as any).tracked_password || <span className="text-muted-foreground">— sem registro. Use "Redefinir Senha" para definir uma nova.</span>}
+                    </p>
+                  ) : (
+                    <p className="mt-1 font-mono text-sm tracking-widest">••••••••</p>
+                  )}
+                </div>
+
+                <div className="rounded-lg border p-3">
                   <h4 className="mb-2 text-sm font-semibold">Credenciais de Serviço</h4>
                   <ScrollArea className="max-h-32">
                     {credentials.length === 0 ? (
