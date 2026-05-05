@@ -319,7 +319,7 @@ export default function TIChamadosPage() {
                   <div className="flex items-center gap-2"><User className="h-4 w-4 text-muted-foreground" /><div><p className="text-xs text-muted-foreground">Solicitante</p><p className="text-sm font-medium">{selectedTicket.creator?.full_name || "—"}</p></div></div>
                   <div className="flex items-center gap-2"><Calendar className="h-4 w-4 text-muted-foreground" /><div><p className="text-xs text-muted-foreground">Criado em</p><p className="text-sm font-medium">{format(new Date(selectedTicket.created_at), "dd/MM/yyyy", { locale: ptBR })}</p></div></div>
                   <div className="flex items-center gap-2"><Clock className="h-4 w-4 text-muted-foreground" /><div><p className="text-xs text-muted-foreground">Status</p>
-                    <Select value={selectedTicket.status_id} onValueChange={v => updateTicketStatus(selectedTicket.id, v)} disabled={isUpdating}>
+                    <Select value={selectedTicket.status_id} onValueChange={v => requestStatusChange(selectedTicket.id, v)} disabled={isUpdating}>
                       <SelectTrigger className="h-7 w-36 text-sm"><SelectValue /></SelectTrigger>
                       <SelectContent>{statuses.map(s => <SelectItem key={s.id} value={s.id}><div className="flex items-center gap-2"><div className="h-2 w-2 rounded-full" style={{ backgroundColor: s.color }} />{s.name}</div></SelectItem>)}</SelectContent>
                     </Select>
