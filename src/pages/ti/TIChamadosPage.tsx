@@ -420,17 +420,57 @@ export default function TIChamadosPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Import CSV Dialog */}
+      {/* Import XLSX Dialog */}
       <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Importar Chamados</DialogTitle><DialogDescription>Importe dados de chamados antigos via CSV. O arquivo deve ter uma coluna "titulo".</DialogDescription></DialogHeader>
-          <div className="space-y-4">
-            <input ref={importRef} type="file" accept=".csv" className="hidden" onChange={handleImportCSV} />
+          <DialogHeader><DialogTitle>Importar Chamados (XLSX)</DialogTitle><DialogDescription>Importe um lote de chamados via planilha Excel. Colunas: <strong>titulo</strong> (obrigatório) e <strong>descricao</strong>.</DialogDescription></DialogHeader>
+          <div className="space-y-3">
+            <input ref={importRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImportXLSX} />
             <Button variant="outline" className="w-full" onClick={() => importRef.current?.click()}>
-              <Upload className="mr-2 h-4 w-4" /> Selecionar arquivo CSV
+              <FileSpreadsheet className="mr-2 h-4 w-4" /> Selecionar arquivo .xlsx
             </Button>
-            <p className="text-xs text-muted-foreground">Colunas aceitas: titulo, descricao. Outras colunas serão ignoradas.</p>
+            <Button variant="ghost" size="sm" className="w-full" onClick={downloadTemplate}>
+              <Download className="mr-2 h-4 w-4" /> Baixar modelo
+            </Button>
+            <p className="text-xs text-muted-foreground">Os chamados serão criados com status inicial e em seu nome (TI).</p>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Resolution Modal — required before closing tickets */}
+      <Dialog open={!!resolveDialog} onOpenChange={(o) => !o && setResolveDialog(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Classificação Técnica</DialogTitle>
+            <DialogDescription>Antes de finalizar, registre a classificação do chamado. Visível apenas para o TI.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Foi um problema?</Label>
+              <Select value={resolveForm.is_problem} onValueChange={v => setResolveForm(p => ({ ...p, is_problem: v }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="yes">Sim, era um problema</SelectItem>
+                  <SelectItem value="no">Não (dúvida, configuração, solicitação)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Tipo</Label>
+              <Select value={resolveForm.resolution_type} onValueChange={v => setResolveForm(p => ({ ...p, resolution_type: v }))}>
+                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                <SelectContent>{RESOLUTION_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Descrição técnica</Label>
+              <Textarea rows={3} placeholder="Ex: Reinstalação do driver de rede, ajuste de DNS..." value={resolveForm.resolution_notes} onChange={e => setResolveForm(p => ({ ...p, resolution_notes: e.target.value }))} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setResolveDialog(null)}>Cancelar</Button>
+            <Button onClick={confirmResolution} disabled={!resolveForm.resolution_type}>Concluir Chamado</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
