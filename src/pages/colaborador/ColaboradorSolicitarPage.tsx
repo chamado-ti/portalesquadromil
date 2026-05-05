@@ -25,12 +25,12 @@ export default function ColaboradorSolicitarPage() {
     queryKey: ['my-simple-appts', user?.id],
     queryFn: async () => {
       if (!user?.id) return [];
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('appointments').select('*')
-        .eq('user_id', user.id).eq('appointment_type' as any, 'simple')
+        .eq('user_id', user.id).eq('appointment_type', 'simple')
         .order('created_at', { ascending: false }).limit(20);
       if (error) throw error;
-      return data;
+      return data || [];
     },
     enabled: !!user?.id,
   });
