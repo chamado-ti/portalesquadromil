@@ -53,6 +53,7 @@ export default function TIUsuariosPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [detailUser, setDetailUser] = useState<User | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
   const [credentialForm, setCredentialForm] = useState({ service_email: '', service_password: '', service_name: '' });
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
