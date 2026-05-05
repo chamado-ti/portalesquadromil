@@ -51,6 +51,8 @@ export default function TIChamadosPage() {
   const [ticketToDelete, setTicketToDelete] = useState<string | null>(null);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const importRef = useRef<HTMLInputElement>(null);
+  const [resolveDialog, setResolveDialog] = useState<{ ticketId: string; statusId: string } | null>(null);
+  const [resolveForm, setResolveForm] = useState({ is_problem: 'yes', resolution_type: '', resolution_notes: '' });
 
   const { data: collaborators = [] } = useQuery({
     queryKey: ['profiles-colaboradores'],
