@@ -35,6 +35,8 @@ const GuaritaDashboard = React.lazy(() => import("./pages/guarita/GuaritaDashboa
 const GuaritaQRCodePage = React.lazy(() => import("./pages/guarita/GuaritaQRCodePage"));
 const GuaritaHistoricoPage = React.lazy(() => import("./pages/guarita/GuaritaHistoricoPage"));
 const GuaritaAgendarPage = React.lazy(() => import("./pages/guarita/GuaritaAgendarPage"));
+const GuaritaSolicitacoesPage = React.lazy(() => import("./pages/guarita/GuaritaSolicitacoesPage"));
+const GuaritaChamadosPage = React.lazy(() => import("./pages/guarita/GuaritaChamadosPage"));
 
 const ColaboradorDashboard = React.lazy(() => import("./pages/colaborador/ColaboradorDashboard"));
 const ColaboradorAssistentePage = React.lazy(() => import("./pages/colaborador/ColaboradorAssistentePage"));
@@ -42,6 +44,7 @@ const ColaboradorChamadosPage = React.lazy(() => import("./pages/colaborador/Col
 const ColaboradorAgendamentosPage = React.lazy(() => import("./pages/colaborador/ColaboradorAgendamentosPage"));
 const ColaboradorAgentesPage = React.lazy(() => import("./pages/colaborador/ColaboradorAgentesPage"));
 const ColaboradorGruposPage = React.lazy(() => import("./pages/colaborador/ColaboradorGruposPage"));
+const ColaboradorSolicitarPage = React.lazy(() => import("./pages/colaborador/ColaboradorSolicitarPage"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -89,7 +92,9 @@ const App = () => (
 
                 <Route path="/guarita" element={<ProtectedRoute allowedRoles={['guarita']}><GuaritaDashboard /></ProtectedRoute>} />
                 <Route path="/guarita/agendar" element={<ProtectedRoute allowedRoles={['guarita']}><GuaritaAgendarPage /></ProtectedRoute>} />
+                <Route path="/guarita/solicitacoes" element={<ProtectedRoute allowedRoles={['guarita']}><GuaritaSolicitacoesPage /></ProtectedRoute>} />
                 <Route path="/guarita/qrcode" element={<ProtectedRoute allowedRoles={['guarita']}><GuaritaQRCodePage /></ProtectedRoute>} />
+                <Route path="/guarita/chamados" element={<ProtectedRoute allowedRoles={['guarita']}><GuaritaChamadosPage /></ProtectedRoute>} />
                 <Route path="/guarita/historico" element={<ProtectedRoute allowedRoles={['guarita']}><GuaritaHistoricoPage /></ProtectedRoute>} />
 
                 <Route path="/colaborador" element={<ProtectedRoute allowedRoles={['colaborador']}><ColaboradorDashboard /></ProtectedRoute>} />
@@ -98,6 +103,7 @@ const App = () => (
                 <Route path="/colaborador/agendamentos" element={<ProtectedRoute allowedRoles={['colaborador']}><ColaboradorAgendamentosPage /></ProtectedRoute>} />
                 <Route path="/colaborador/agentes" element={<ProtectedRoute allowedRoles={['colaborador']}><ColaboradorAgentesPage /></ProtectedRoute>} />
                 <Route path="/colaborador/grupos" element={<ProtectedRoute allowedRoles={['colaborador']}><ColaboradorGruposPage /></ProtectedRoute>} />
+                <Route path="/colaborador/solicitar" element={<ProtectedRoute allowedRoles={['colaborador']}><ColaboradorSolicitarPage /></ProtectedRoute>} />
 
                 <Route path="*" element={<NotFound />} />
               </Routes>

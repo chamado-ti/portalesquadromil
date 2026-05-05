@@ -44,7 +44,9 @@ const navItems: NavItem[] = [
 
   { label: 'Painel', href: '/guarita', icon: LayoutDashboard, roles: ['guarita'] },
   { label: 'Novo Agendamento', href: '/guarita/agendar', icon: Plus, roles: ['guarita'] },
+  { label: 'Solicitações', href: '/guarita/solicitacoes', icon: Bell, roles: ['guarita'] },
   { label: 'Leitura QR Code', href: '/guarita/qrcode', icon: QrCode, roles: ['guarita'] },
+  { label: 'Meus Chamados', href: '/guarita/chamados', icon: Ticket, roles: ['guarita'] },
   { label: 'Histórico', href: '/guarita/historico', icon: History, roles: ['guarita'] },
 
   { label: 'Início', href: '/colaborador', icon: LayoutDashboard, roles: ['colaborador'] },
@@ -52,6 +54,7 @@ const navItems: NavItem[] = [
   { label: 'Meus Agentes', href: '/colaborador/agentes', icon: Cpu, roles: ['colaborador'] },
   { label: 'Meus Chamados', href: '/colaborador/chamados', icon: Ticket, roles: ['colaborador'] },
   { label: 'Agendamentos', href: '/colaborador/agendamentos', icon: Calendar, roles: ['colaborador'] },
+  { label: 'Solicitar à Guarita', href: '/colaborador/solicitar', icon: Plus, roles: ['colaborador'] },
   { label: 'Grupos', href: '/colaborador/grupos', icon: MessageSquare, roles: ['colaborador'] },
 ];
 

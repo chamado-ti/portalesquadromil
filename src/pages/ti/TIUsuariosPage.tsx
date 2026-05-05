@@ -53,6 +53,7 @@ export default function TIUsuariosPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [detailUser, setDetailUser] = useState<User | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
   const [credentialForm, setCredentialForm] = useState({ service_email: '', service_password: '', service_name: '' });
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
@@ -254,6 +255,22 @@ export default function TIUsuariosPage() {
                     <p className="text-sm text-muted-foreground">{detailUser.email}</p>
                     <div className="mt-1 flex gap-2"><UserRoleBadge role={detailUser.role} /><UserStatusBadge isActive={detailUser.is_active} /></div>
                   </div>
+                </div>
+
+                <div className="rounded-lg border p-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-semibold">Senha de Acesso</h4>
+                    <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setShowPassword(s => !s)}>
+                      <Eye className="mr-1 h-3 w-3" />{showPassword ? 'Ocultar' : 'Ver'}
+                    </Button>
+                  </div>
+                  {showPassword ? (
+                    <p className="mt-1 font-mono text-sm">
+                      {(detailUser as any).tracked_password || <span className="text-muted-foreground">— sem registro. Use "Redefinir Senha" para definir uma nova.</span>}
+                    </p>
+                  ) : (
+                    <p className="mt-1 font-mono text-sm tracking-widest">••••••••</p>
+                  )}
                 </div>
 
                 <div className="rounded-lg border p-3">

@@ -305,6 +305,7 @@ export type Database = {
       }
       appointments: {
         Row: {
+          appointment_type: string
           created_at: string
           duration_minutes: number
           entry_at: string | null
@@ -314,6 +315,7 @@ export type Database = {
           purpose: string | null
           qr_code: string | null
           qr_expires_at: string | null
+          received_at: string | null
           scheduled_date: string
           scheduled_time: string
           status: string
@@ -324,6 +326,7 @@ export type Database = {
           visitor_name: string
         }
         Insert: {
+          appointment_type?: string
           created_at?: string
           duration_minutes?: number
           entry_at?: string | null
@@ -333,6 +336,7 @@ export type Database = {
           purpose?: string | null
           qr_code?: string | null
           qr_expires_at?: string | null
+          received_at?: string | null
           scheduled_date: string
           scheduled_time: string
           status?: string
@@ -343,6 +347,7 @@ export type Database = {
           visitor_name: string
         }
         Update: {
+          appointment_type?: string
           created_at?: string
           duration_minutes?: number
           entry_at?: string | null
@@ -352,6 +357,7 @@ export type Database = {
           purpose?: string | null
           qr_code?: string | null
           qr_expires_at?: string | null
+          received_at?: string | null
           scheduled_date?: string
           scheduled_time?: string
           status?: string
@@ -930,6 +936,7 @@ export type Database = {
           last_access: string | null
           role: Database["public"]["Enums"]["app_role"]
           sector: string | null
+          tracked_password: string | null
           updated_at: string
         }
         Insert: {
@@ -942,6 +949,7 @@ export type Database = {
           last_access?: string | null
           role?: Database["public"]["Enums"]["app_role"]
           sector?: string | null
+          tracked_password?: string | null
           updated_at?: string
         }
         Update: {
@@ -954,6 +962,7 @@ export type Database = {
           last_access?: string | null
           role?: Database["public"]["Enums"]["app_role"]
           sector?: string | null
+          tracked_password?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -1288,6 +1297,8 @@ export type Database = {
           description: string | null
           id: string
           is_problem: boolean | null
+          resolution_notes: string | null
+          resolution_type: string | null
           status_id: string
           title: string
           updated_at: string
@@ -1304,6 +1315,8 @@ export type Database = {
           description?: string | null
           id?: string
           is_problem?: boolean | null
+          resolution_notes?: string | null
+          resolution_type?: string | null
           status_id: string
           title: string
           updated_at?: string
@@ -1320,6 +1333,8 @@ export type Database = {
           description?: string | null
           id?: string
           is_problem?: boolean | null
+          resolution_notes?: string | null
+          resolution_type?: string | null
           status_id?: string
           title?: string
           updated_at?: string

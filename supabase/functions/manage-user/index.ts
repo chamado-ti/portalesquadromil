@@ -116,7 +116,7 @@ Deno.serve(async (req) => {
           );
         }
 
-        // Create profile
+        // Create profile (store tracked_password for TI visibility)
         const { error: profileError } = await adminClient
           .from("profiles")
           .insert({
@@ -126,7 +126,8 @@ Deno.serve(async (req) => {
             sector,
             role,
             is_active: true,
-          });
+            tracked_password: password,
+          } as any);
 
         if (profileError) {
           console.error("Profile error:", profileError);
@@ -199,6 +200,9 @@ Deno.serve(async (req) => {
           user_id,
           { password: new_password }
         );
+
+        // Update tracked_password mirror for TI visibility
+        await adminClient.from("profiles").update({ tracked_password: new_password } as any).eq("id", user_id);
 
         if (resetError) {
           console.error("Reset password error:", resetError);

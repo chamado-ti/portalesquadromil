@@ -24,12 +24,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import {
   Search, MessageSquare, User, Calendar, Clock, Send, AlertCircle, RefreshCw,
-  Ticket as TicketIcon, Download, Plus, Trash2, Image, Upload,
+  Ticket as TicketIcon, Download, Plus, Trash2, Image, Upload, FileSpreadsheet,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { AttachmentCardThumbs, AttachmentList } from "@/components/AttachmentPreview";
+import * as XLSX from "xlsx";
+
+const RESOLUTION_TYPES = ["Configuração", "Manutenção", "Hardware", "Software", "Rede", "Acesso/Senha", "Treinamento", "Outro"];
+const FINAL_STATUS_NAMES = ["Finalizado", "Resolvido pelo colaborador"];
 
 export default function TIChamadosPage() {
   const {
@@ -47,6 +51,8 @@ export default function TIChamadosPage() {
   const [ticketToDelete, setTicketToDelete] = useState<string | null>(null);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const importRef = useRef<HTMLInputElement>(null);
+  const [resolveDialog, setResolveDialog] = useState<{ ticketId: string; statusId: string } | null>(null);
+  const [resolveForm, setResolveForm] = useState({ is_problem: 'yes', resolution_type: '', resolution_notes: '' });
 
   const { data: collaborators = [] } = useQuery({
     queryKey: ['profiles-colaboradores'],
@@ -73,10 +79,37 @@ export default function TIChamadosPage() {
 
   const handleDragStart = (e: React.DragEvent, ticketId: string) => { e.dataTransfer.setData("ticketId", ticketId); };
   const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); };
+  const isFinalStatus = (statusId: string) => {
+    const s = statuses.find(s => s.id === statusId);
+    return s ? FINAL_STATUS_NAMES.includes(s.name) : false;
+  };
+
+  const requestStatusChange = (ticketId: string, statusId: string) => {
+    const ticket = tickets.find(t => t.id === ticketId);
+    if (isFinalStatus(statusId) && ticket && (ticket as any).resolution_type == null) {
+      setResolveForm({ is_problem: 'yes', resolution_type: '', resolution_notes: '' });
+      setResolveDialog({ ticketId, statusId });
+      return;
+    }
+    updateTicketStatus(ticketId, statusId);
+  };
+
   const handleDrop = async (e: React.DragEvent, statusId: string) => {
     e.preventDefault();
     const ticketId = e.dataTransfer.getData("ticketId");
-    if (ticketId) await updateTicketStatus(ticketId, statusId);
+    if (ticketId) requestStatusChange(ticketId, statusId);
+  };
+
+  const confirmResolution = async () => {
+    if (!resolveDialog) return;
+    await (supabase as any).from('tickets').update({
+      is_problem: resolveForm.is_problem === 'yes',
+      resolution_type: resolveForm.resolution_type || null,
+      resolution_notes: resolveForm.resolution_notes || null,
+    }).eq('id', resolveDialog.ticketId);
+    await updateTicketStatus(resolveDialog.ticketId, resolveDialog.statusId);
+    setResolveDialog(null);
+    refetch();
   };
 
   const handleSendMessage = async () => {
@@ -129,34 +162,51 @@ export default function TIChamadosPage() {
   };
 
   // CSV import handler
-  const handleImportCSV = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImportXLSX = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const text = await file.text();
-    const lines = text.split('\n').filter(l => l.trim());
-    if (lines.length < 2) { toast({ title: 'Arquivo vazio', variant: 'destructive' }); return; }
-    // Parse CSV headers
-    const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/"/g, ''));
-    const titleIdx = headers.findIndex(h => h.includes('titulo') || h.includes('title'));
-    const descIdx = headers.findIndex(h => h.includes('descri') || h.includes('description'));
-    if (titleIdx === -1) { toast({ title: 'CSV precisa ter coluna "titulo"', variant: 'destructive' }); return; }
+    try {
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(buf);
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows: any[] = XLSX.utils.sheet_to_json(ws, { defval: '' });
+      if (rows.length === 0) { toast({ title: 'Planilha vazia', variant: 'destructive' }); return; }
 
-    const firstStatus = statuses[0];
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user || !firstStatus) return;
+      const firstStatus = statuses[0];
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || !firstStatus) return;
 
-    let count = 0;
-    for (let i = 1; i < lines.length; i++) {
-      const cols = lines[i].split(',').map(c => c.trim().replace(/"/g, ''));
-      const title = cols[titleIdx];
-      if (!title) continue;
-      const description = descIdx >= 0 ? cols[descIdx] : null;
-      await supabase.from('tickets').insert({ title, description, created_by: user.id, status_id: firstStatus.id });
-      count++;
+      // normalize keys
+      const norm = (s: string) => s.toString().toLowerCase().trim();
+      const findKey = (row: any, names: string[]) =>
+        Object.keys(row).find(k => names.includes(norm(k)));
+
+      let count = 0, skipped = 0;
+      for (const row of rows) {
+        const tKey = findKey(row, ['titulo', 'título', 'title']);
+        const dKey = findKey(row, ['descricao', 'descrição', 'description']);
+        const title = tKey ? String(row[tKey]).trim() : '';
+        if (!title) { skipped++; continue; }
+        const description = dKey ? String(row[dKey]).trim() : null;
+        await supabase.from('tickets').insert({
+          title, description, created_by: user.id, status_id: firstStatus.id,
+        });
+        count++;
+      }
+      toast({ title: `${count} chamado(s) importado(s)`, description: skipped ? `${skipped} linha(s) ignorada(s).` : undefined });
+      refetch();
+      setImportDialogOpen(false);
+      if (importRef.current) importRef.current.value = '';
+    } catch (err: any) {
+      toast({ title: 'Erro ao importar', description: err.message, variant: 'destructive' });
     }
-    toast({ title: `${count} chamados importados com sucesso!` });
-    refetch();
-    setImportDialogOpen(false);
+  };
+
+  const downloadTemplate = () => {
+    const ws = XLSX.utils.json_to_sheet([{ titulo: 'Exemplo de chamado', descricao: 'Detalhes opcionais' }]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Chamados');
+    XLSX.writeFile(wb, 'modelo-chamados.xlsx');
   };
 
   const getUrgencyColor = (urgencyId: string | null) => urgencies.find(u => u.id === urgencyId)?.color || "#6b7280";
@@ -286,7 +336,7 @@ export default function TIChamadosPage() {
                   <div className="flex items-center gap-2"><User className="h-4 w-4 text-muted-foreground" /><div><p className="text-xs text-muted-foreground">Solicitante</p><p className="text-sm font-medium">{selectedTicket.creator?.full_name || "—"}</p></div></div>
                   <div className="flex items-center gap-2"><Calendar className="h-4 w-4 text-muted-foreground" /><div><p className="text-xs text-muted-foreground">Criado em</p><p className="text-sm font-medium">{format(new Date(selectedTicket.created_at), "dd/MM/yyyy", { locale: ptBR })}</p></div></div>
                   <div className="flex items-center gap-2"><Clock className="h-4 w-4 text-muted-foreground" /><div><p className="text-xs text-muted-foreground">Status</p>
-                    <Select value={selectedTicket.status_id} onValueChange={v => updateTicketStatus(selectedTicket.id, v)} disabled={isUpdating}>
+                    <Select value={selectedTicket.status_id} onValueChange={v => requestStatusChange(selectedTicket.id, v)} disabled={isUpdating}>
                       <SelectTrigger className="h-7 w-36 text-sm"><SelectValue /></SelectTrigger>
                       <SelectContent>{statuses.map(s => <SelectItem key={s.id} value={s.id}><div className="flex items-center gap-2"><div className="h-2 w-2 rounded-full" style={{ backgroundColor: s.color }} />{s.name}</div></SelectItem>)}</SelectContent>
                     </Select>
@@ -370,17 +420,57 @@ export default function TIChamadosPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Import CSV Dialog */}
+      {/* Import XLSX Dialog */}
       <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Importar Chamados</DialogTitle><DialogDescription>Importe dados de chamados antigos via CSV. O arquivo deve ter uma coluna "titulo".</DialogDescription></DialogHeader>
-          <div className="space-y-4">
-            <input ref={importRef} type="file" accept=".csv" className="hidden" onChange={handleImportCSV} />
+          <DialogHeader><DialogTitle>Importar Chamados (XLSX)</DialogTitle><DialogDescription>Importe um lote de chamados via planilha Excel. Colunas: <strong>titulo</strong> (obrigatório) e <strong>descricao</strong>.</DialogDescription></DialogHeader>
+          <div className="space-y-3">
+            <input ref={importRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImportXLSX} />
             <Button variant="outline" className="w-full" onClick={() => importRef.current?.click()}>
-              <Upload className="mr-2 h-4 w-4" /> Selecionar arquivo CSV
+              <FileSpreadsheet className="mr-2 h-4 w-4" /> Selecionar arquivo .xlsx
             </Button>
-            <p className="text-xs text-muted-foreground">Colunas aceitas: titulo, descricao. Outras colunas serão ignoradas.</p>
+            <Button variant="ghost" size="sm" className="w-full" onClick={downloadTemplate}>
+              <Download className="mr-2 h-4 w-4" /> Baixar modelo
+            </Button>
+            <p className="text-xs text-muted-foreground">Os chamados serão criados com status inicial e em seu nome (TI).</p>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Resolution Modal — required before closing tickets */}
+      <Dialog open={!!resolveDialog} onOpenChange={(o) => !o && setResolveDialog(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Classificação Técnica</DialogTitle>
+            <DialogDescription>Antes de finalizar, registre a classificação do chamado. Visível apenas para o TI.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Foi um problema?</Label>
+              <Select value={resolveForm.is_problem} onValueChange={v => setResolveForm(p => ({ ...p, is_problem: v }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="yes">Sim, era um problema</SelectItem>
+                  <SelectItem value="no">Não (dúvida, configuração, solicitação)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Tipo</Label>
+              <Select value={resolveForm.resolution_type} onValueChange={v => setResolveForm(p => ({ ...p, resolution_type: v }))}>
+                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                <SelectContent>{RESOLUTION_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Descrição técnica</Label>
+              <Textarea rows={3} placeholder="Ex: Reinstalação do driver de rede, ajuste de DNS..." value={resolveForm.resolution_notes} onChange={e => setResolveForm(p => ({ ...p, resolution_notes: e.target.value }))} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setResolveDialog(null)}>Cancelar</Button>
+            <Button onClick={confirmResolution} disabled={!resolveForm.resolution_type}>Concluir Chamado</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
