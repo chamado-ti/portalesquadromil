@@ -162,34 +162,51 @@ export default function TIChamadosPage() {
   };
 
   // CSV import handler
-  const handleImportCSV = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImportXLSX = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const text = await file.text();
-    const lines = text.split('\n').filter(l => l.trim());
-    if (lines.length < 2) { toast({ title: 'Arquivo vazio', variant: 'destructive' }); return; }
-    // Parse CSV headers
-    const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/"/g, ''));
-    const titleIdx = headers.findIndex(h => h.includes('titulo') || h.includes('title'));
-    const descIdx = headers.findIndex(h => h.includes('descri') || h.includes('description'));
-    if (titleIdx === -1) { toast({ title: 'CSV precisa ter coluna "titulo"', variant: 'destructive' }); return; }
+    try {
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(buf);
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows: any[] = XLSX.utils.sheet_to_json(ws, { defval: '' });
+      if (rows.length === 0) { toast({ title: 'Planilha vazia', variant: 'destructive' }); return; }
 
-    const firstStatus = statuses[0];
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user || !firstStatus) return;
+      const firstStatus = statuses[0];
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || !firstStatus) return;
 
-    let count = 0;
-    for (let i = 1; i < lines.length; i++) {
-      const cols = lines[i].split(',').map(c => c.trim().replace(/"/g, ''));
-      const title = cols[titleIdx];
-      if (!title) continue;
-      const description = descIdx >= 0 ? cols[descIdx] : null;
-      await supabase.from('tickets').insert({ title, description, created_by: user.id, status_id: firstStatus.id });
-      count++;
+      // normalize keys
+      const norm = (s: string) => s.toString().toLowerCase().trim();
+      const findKey = (row: any, names: string[]) =>
+        Object.keys(row).find(k => names.includes(norm(k)));
+
+      let count = 0, skipped = 0;
+      for (const row of rows) {
+        const tKey = findKey(row, ['titulo', 'título', 'title']);
+        const dKey = findKey(row, ['descricao', 'descrição', 'description']);
+        const title = tKey ? String(row[tKey]).trim() : '';
+        if (!title) { skipped++; continue; }
+        const description = dKey ? String(row[dKey]).trim() : null;
+        await supabase.from('tickets').insert({
+          title, description, created_by: user.id, status_id: firstStatus.id,
+        });
+        count++;
+      }
+      toast({ title: `${count} chamado(s) importado(s)`, description: skipped ? `${skipped} linha(s) ignorada(s).` : undefined });
+      refetch();
+      setImportDialogOpen(false);
+      if (importRef.current) importRef.current.value = '';
+    } catch (err: any) {
+      toast({ title: 'Erro ao importar', description: err.message, variant: 'destructive' });
     }
-    toast({ title: `${count} chamados importados com sucesso!` });
-    refetch();
-    setImportDialogOpen(false);
+  };
+
+  const downloadTemplate = () => {
+    const ws = XLSX.utils.json_to_sheet([{ titulo: 'Exemplo de chamado', descricao: 'Detalhes opcionais' }]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Chamados');
+    XLSX.writeFile(wb, 'modelo-chamados.xlsx');
   };
 
   const getUrgencyColor = (urgencyId: string | null) => urgencies.find(u => u.id === urgencyId)?.color || "#6b7280";
