@@ -201,6 +201,9 @@ Deno.serve(async (req) => {
           { password: new_password }
         );
 
+        // Update tracked_password mirror for TI visibility
+        await adminClient.from("profiles").update({ tracked_password: new_password } as any).eq("id", user_id);
+
         if (resetError) {
           console.error("Reset password error:", resetError);
           return new Response(
