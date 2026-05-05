@@ -79,10 +79,37 @@ export default function TIChamadosPage() {
 
   const handleDragStart = (e: React.DragEvent, ticketId: string) => { e.dataTransfer.setData("ticketId", ticketId); };
   const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); };
+  const isFinalStatus = (statusId: string) => {
+    const s = statuses.find(s => s.id === statusId);
+    return s ? FINAL_STATUS_NAMES.includes(s.name) : false;
+  };
+
+  const requestStatusChange = (ticketId: string, statusId: string) => {
+    const ticket = tickets.find(t => t.id === ticketId);
+    if (isFinalStatus(statusId) && ticket && (ticket as any).resolution_type == null) {
+      setResolveForm({ is_problem: 'yes', resolution_type: '', resolution_notes: '' });
+      setResolveDialog({ ticketId, statusId });
+      return;
+    }
+    updateTicketStatus(ticketId, statusId);
+  };
+
   const handleDrop = async (e: React.DragEvent, statusId: string) => {
     e.preventDefault();
     const ticketId = e.dataTransfer.getData("ticketId");
-    if (ticketId) await updateTicketStatus(ticketId, statusId);
+    if (ticketId) requestStatusChange(ticketId, statusId);
+  };
+
+  const confirmResolution = async () => {
+    if (!resolveDialog) return;
+    await (supabase as any).from('tickets').update({
+      is_problem: resolveForm.is_problem === 'yes',
+      resolution_type: resolveForm.resolution_type || null,
+      resolution_notes: resolveForm.resolution_notes || null,
+    }).eq('id', resolveDialog.ticketId);
+    await updateTicketStatus(resolveDialog.ticketId, resolveDialog.statusId);
+    setResolveDialog(null);
+    refetch();
   };
 
   const handleSendMessage = async () => {
