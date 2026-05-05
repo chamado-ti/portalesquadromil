@@ -44,7 +44,9 @@ const navItems: NavItem[] = [
 
   { label: 'Painel', href: '/guarita', icon: LayoutDashboard, roles: ['guarita'] },
   { label: 'Novo Agendamento', href: '/guarita/agendar', icon: Plus, roles: ['guarita'] },
+  { label: 'Solicitações', href: '/guarita/solicitacoes', icon: Bell, roles: ['guarita'] },
   { label: 'Leitura QR Code', href: '/guarita/qrcode', icon: QrCode, roles: ['guarita'] },
+  { label: 'Meus Chamados', href: '/guarita/chamados', icon: Ticket, roles: ['guarita'] },
   { label: 'Histórico', href: '/guarita/historico', icon: History, roles: ['guarita'] },
 
   { label: 'Início', href: '/colaborador', icon: LayoutDashboard, roles: ['colaborador'] },
