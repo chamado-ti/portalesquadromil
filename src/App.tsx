@@ -92,7 +92,9 @@ const App = () => (
 
                 <Route path="/guarita" element={<ProtectedRoute allowedRoles={['guarita']}><GuaritaDashboard /></ProtectedRoute>} />
                 <Route path="/guarita/agendar" element={<ProtectedRoute allowedRoles={['guarita']}><GuaritaAgendarPage /></ProtectedRoute>} />
+                <Route path="/guarita/solicitacoes" element={<ProtectedRoute allowedRoles={['guarita']}><GuaritaSolicitacoesPage /></ProtectedRoute>} />
                 <Route path="/guarita/qrcode" element={<ProtectedRoute allowedRoles={['guarita']}><GuaritaQRCodePage /></ProtectedRoute>} />
+                <Route path="/guarita/chamados" element={<ProtectedRoute allowedRoles={['guarita']}><GuaritaChamadosPage /></ProtectedRoute>} />
                 <Route path="/guarita/historico" element={<ProtectedRoute allowedRoles={['guarita']}><GuaritaHistoricoPage /></ProtectedRoute>} />
 
                 <Route path="/colaborador" element={<ProtectedRoute allowedRoles={['colaborador']}><ColaboradorDashboard /></ProtectedRoute>} />
@@ -101,6 +103,7 @@ const App = () => (
                 <Route path="/colaborador/agendamentos" element={<ProtectedRoute allowedRoles={['colaborador']}><ColaboradorAgendamentosPage /></ProtectedRoute>} />
                 <Route path="/colaborador/agentes" element={<ProtectedRoute allowedRoles={['colaborador']}><ColaboradorAgentesPage /></ProtectedRoute>} />
                 <Route path="/colaborador/grupos" element={<ProtectedRoute allowedRoles={['colaborador']}><ColaboradorGruposPage /></ProtectedRoute>} />
+                <Route path="/colaborador/solicitar" element={<ProtectedRoute allowedRoles={['colaborador']}><ColaboradorSolicitarPage /></ProtectedRoute>} />
 
                 <Route path="*" element={<NotFound />} />
               </Routes>
