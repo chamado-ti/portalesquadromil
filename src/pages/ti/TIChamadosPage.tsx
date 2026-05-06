@@ -291,7 +291,12 @@ export default function TIChamadosPage() {
   };
 
   const downloadTemplate = () => {
-    const ws = XLSX.utils.json_to_sheet([{ titulo: 'Exemplo de chamado', descricao: 'Detalhes opcionais' }]);
+    const ws = XLSX.utils.json_to_sheet([{
+      Data: new Date().toISOString(), Nome: 'João Silva', Setor: 'Comercial',
+      'Tipo de Problema': 'Descrição detalhada do problema', Urgência: 'Média',
+      'Tipo do Chamado': 'Sistema Nomus', 'Classificação Técnica': 'Configuração',
+      Status: 'Concluído', Problema: 'sim',
+    }]);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Chamados');
     XLSX.writeFile(wb, 'modelo-chamados.xlsx');
