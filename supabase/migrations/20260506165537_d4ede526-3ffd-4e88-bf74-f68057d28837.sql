@@ -1,0 +1,1 @@
+CREATE POLICY "TI can insert tickets for any user" ON public.tickets FOR INSERT TO authenticated WITH CHECK (public.is_ti());

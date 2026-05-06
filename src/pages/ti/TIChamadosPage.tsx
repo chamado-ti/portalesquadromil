@@ -275,8 +275,11 @@ export default function TIChamadosPage() {
         if (isClosed && createdAt) insertData.closed_at = createdAt;
 
         const { error: insErr } = await supabase.from('tickets').insert(insertData);
-        if (insErr) { skipped++; continue; }
+        if (insErr) { console.error('Import row failed:', insErr, insertData); skipped++; continue; }
         count++;
+      }
+      if (count === 0) {
+        toast({ title: 'Nenhum chamado importado', description: `Verifique colunas/permissões. ${skipped} ignorado(s), ${noUser} sem usuário.`, variant: 'destructive' });
       }
       toast({
         title: `${count} chamado(s) importado(s)`,
