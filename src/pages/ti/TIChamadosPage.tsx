@@ -44,7 +44,11 @@ export default function TIChamadosPage() {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [urgencyFilter, setUrgencyFilter] = useState<string>("all");
-  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+  const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
+  const selectedTicket = useMemo(
+    () => (selectedTicketId ? tickets.find(t => t.id === selectedTicketId) ?? null : null),
+    [selectedTicketId, tickets]
+  );
   const [newMessage, setNewMessage] = useState("");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
