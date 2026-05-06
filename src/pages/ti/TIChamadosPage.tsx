@@ -155,7 +155,7 @@ export default function TIChamadosPage() {
       await deleteTicket(ticketToDelete);
       setDeleteDialogOpen(false);
       setTicketToDelete(null);
-      if (selectedTicket?.id === ticketToDelete) setSelectedTicket(null);
+      if (selectedTicket?.id === ticketToDelete) setSelectedTicketId(null);
     } catch {}
   };
 
@@ -285,7 +285,7 @@ export default function TIChamadosPage() {
                         <p className="text-xs text-muted-foreground">Vazio</p>
                       </div>
                     ) : ticketsByStatus[status.id]?.map(ticket => (
-                      <Card key={ticket.id} className="cursor-pointer transition-all hover:shadow-md" draggable onDragStart={e => handleDragStart(e, ticket.id)} onClick={() => setSelectedTicket(ticket)}>
+                      <Card key={ticket.id} className="cursor-pointer transition-all hover:shadow-md" draggable onDragStart={e => handleDragStart(e, ticket.id)} onClick={() => setSelectedTicketId(ticket.id)}>
                         <CardContent className="p-2.5">
                           <div className="mb-1.5 flex items-start justify-between gap-1">
                             <h4 className="line-clamp-2 text-xs font-medium leading-tight">{ticket.title}</h4>
@@ -323,7 +323,7 @@ export default function TIChamadosPage() {
       </div>
 
       {/* Ticket Detail */}
-      <Dialog open={!!selectedTicket} onOpenChange={() => setSelectedTicket(null)}>
+      <Dialog open={!!selectedTicket} onOpenChange={() => setSelectedTicketId(null)}>
         <DialogContent className="max-h-[90vh] max-w-2xl overflow-hidden">
           {selectedTicket && (
             <>
@@ -392,7 +392,7 @@ export default function TIChamadosPage() {
               </div>
               <DialogFooter className="gap-2">
                 <Button variant="destructive" size="sm" onClick={() => confirmDelete(selectedTicket.id)}><Trash2 className="mr-2 h-4 w-4" />Excluir</Button>
-                <Button variant="outline" onClick={() => setSelectedTicket(null)}>Fechar</Button>
+                <Button variant="outline" onClick={() => setSelectedTicketId(null)}>Fechar</Button>
               </DialogFooter>
             </>
           )}
