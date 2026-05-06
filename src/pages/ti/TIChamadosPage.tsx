@@ -511,7 +511,7 @@ export default function TIChamadosPage() {
       {/* Import XLSX Dialog */}
       <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Importar Chamados (XLSX)</DialogTitle><DialogDescription>Importe um lote de chamados via planilha Excel. Colunas: <strong>titulo</strong> (obrigatório) e <strong>descricao</strong>.</DialogDescription></DialogHeader>
+          <DialogHeader><DialogTitle>Importar Chamados (XLSX)</DialogTitle><DialogDescription>Colunas suportadas: <strong>Data, Nome, Setor, Tipo de Problema, Urgência, Tipo do Chamado, Classificação Técnica, Status, Problema</strong>. Nomes duplicados são diferenciados pelo setor; capitalização é normalizada.</DialogDescription></DialogHeader>
           <div className="space-y-3">
             <input ref={importRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImportXLSX} />
             <Button variant="outline" className="w-full" onClick={() => importRef.current?.click()}>
