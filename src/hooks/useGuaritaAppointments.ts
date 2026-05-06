@@ -57,6 +57,7 @@ export function useGuaritaAppointments() {
           .from('appointments')
           .select('*')
           .eq('scheduled_date', today)
+          .neq('appointment_type', 'simple')
           .in('status', ['pending', 'in_progress'])
           .order('scheduled_time', { ascending: true })
       );
@@ -72,6 +73,7 @@ export function useGuaritaAppointments() {
         supabase
           .from('appointments')
           .select('*')
+          .neq('appointment_type', 'simple')
           .order('scheduled_date', { ascending: false })
           .limit(500)
       );

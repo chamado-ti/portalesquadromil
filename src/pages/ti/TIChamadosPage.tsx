@@ -44,7 +44,11 @@ export default function TIChamadosPage() {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [urgencyFilter, setUrgencyFilter] = useState<string>("all");
-  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+  const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
+  const selectedTicket = useMemo(
+    () => (selectedTicketId ? tickets.find(t => t.id === selectedTicketId) ?? null : null),
+    [selectedTicketId, tickets]
+  );
   const [newMessage, setNewMessage] = useState("");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -151,7 +155,7 @@ export default function TIChamadosPage() {
       await deleteTicket(ticketToDelete);
       setDeleteDialogOpen(false);
       setTicketToDelete(null);
-      if (selectedTicket?.id === ticketToDelete) setSelectedTicket(null);
+      if (selectedTicket?.id === ticketToDelete) setSelectedTicketId(null);
     } catch {}
   };
 
@@ -172,28 +176,112 @@ export default function TIChamadosPage() {
       const rows: any[] = XLSX.utils.sheet_to_json(ws, { defval: '' });
       if (rows.length === 0) { toast({ title: 'Planilha vazia', variant: 'destructive' }); return; }
 
-      const firstStatus = statuses[0];
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user || !firstStatus) return;
+      if (!user || !statuses.length) return;
 
-      // normalize keys
-      const norm = (s: string) => s.toString().toLowerCase().trim();
-      const findKey = (row: any, names: string[]) =>
-        Object.keys(row).find(k => names.includes(norm(k)));
+      // Load all profiles for matching
+      const { data: allProfiles } = await supabase.from('profiles').select('id, full_name, sector, role');
 
-      let count = 0, skipped = 0;
+      const norm = (s: any) => (s ?? '').toString().toLowerCase().trim();
+      const stripAcc = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      const titleCase = (s: string) => s.toLowerCase().split(/\s+/).filter(Boolean)
+        .map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+      const findKey = (row: any, names: string[]) => {
+        const keys = Object.keys(row);
+        for (const n of names) {
+          const k = keys.find(k => stripAcc(norm(k)) === stripAcc(norm(n)));
+          if (k) return k;
+        }
+        return undefined;
+      };
+
+      // Status & urgency lookups
+      const statusByName = new Map(statuses.map(s => [stripAcc(norm(s.name)), s.id]));
+      const urgencyByName = new Map(urgencies.map(u => [stripAcc(norm(u.name)), u.id]));
+      const finalStatusId = statuses.find(s => FINAL_STATUS_NAMES.includes(s.name))?.id || statuses[statuses.length - 1].id;
+      const firstStatusId = statuses[0].id;
+
+      // Profile resolver: match by name+sector
+      const resolveProfile = (name: string, sector: string) => {
+        const tName = titleCase(stripAcc(norm(name)));
+        const tSector = titleCase(stripAcc(norm(sector)));
+        if (!tName) return null;
+        const candidates = (allProfiles || []).filter(p =>
+          titleCase(stripAcc(norm(p.full_name))).split(' ')[0] === tName.split(' ')[0]
+        );
+        if (candidates.length === 0) return null;
+        if (candidates.length === 1) return candidates[0];
+        // disambiguate by sector
+        const bySec = candidates.find(p => titleCase(stripAcc(norm(p.sector || ''))) === tSector);
+        return bySec || candidates[0];
+      };
+
+      let count = 0, skipped = 0, noUser = 0;
       for (const row of rows) {
-        const tKey = findKey(row, ['titulo', 'título', 'title']);
-        const dKey = findKey(row, ['descricao', 'descrição', 'description']);
-        const title = tKey ? String(row[tKey]).trim() : '';
-        if (!title) { skipped++; continue; }
-        const description = dKey ? String(row[dKey]).trim() : null;
-        await supabase.from('tickets').insert({
-          title, description, created_by: user.id, status_id: firstStatus.id,
-        });
+        const dateK = findKey(row, ['data', 'date']);
+        const nameK = findKey(row, ['nome', 'solicitante', 'name']);
+        const sectorK = findKey(row, ['setor', 'sector']);
+        const probK = findKey(row, ['tipo de problema', 'problema', 'descricao', 'titulo']);
+        const urgK = findKey(row, ['urgencia']);
+        const tipoK = findKey(row, ['tipo do chamado', 'categoria']);
+        const classK = findKey(row, ['classificacao tecnica', 'classificacao']);
+        const statusK = findKey(row, ['status']);
+        const isProblemK = findKey(row, ['problema']);
+        const manuK = findKey(row, ['manutencao/problema', 'manutencao']);
+
+        const rawName = nameK ? String(row[nameK]).trim() : '';
+        const rawSector = sectorK ? String(row[sectorK]).trim() : '';
+        const description = probK ? String(row[probK]).trim() : '';
+        if (!rawName || !description) { skipped++; continue; }
+
+        const profile = resolveProfile(rawName, rawSector);
+        if (!profile) { noUser++; continue; }
+
+        // Title: "Tipo do Chamado — primeiros 60 chars da descrição"
+        const tipo = tipoK ? String(row[tipoK]).trim() : '';
+        const title = (tipo ? `${tipo}: ` : '') + description.slice(0, 80);
+
+        const urgName = urgK ? stripAcc(norm(row[urgK])) : '';
+        const urgency_id = urgencyByName.get(urgName) || null;
+
+        const statusName = statusK ? stripAcc(norm(row[statusK])) : '';
+        const isClosed = ['concluido', 'finalizado', 'resolvido'].some(s => statusName.includes(s));
+        const status_id = isClosed ? finalStatusId : (statusByName.get(statusName) || firstStatusId);
+
+        const isProblem = isProblemK ? norm(row[isProblemK]).startsWith('s') : null;
+        const resType = classK ? String(row[classK]).trim() : (manuK ? String(row[manuK]).trim() : null);
+
+        // Parse date
+        let createdAt: string | null = null;
+        if (dateK && row[dateK]) {
+          const v = row[dateK];
+          if (v instanceof Date) createdAt = v.toISOString();
+          else {
+            const d = new Date(v);
+            if (!isNaN(d.getTime())) createdAt = d.toISOString();
+          }
+        }
+
+        const insertData: any = {
+          title, description,
+          created_by: profile.id,
+          status_id,
+          urgency_id,
+          is_problem: isProblem,
+          resolution_type: resType || null,
+          resolution_notes: tipo || null,
+        };
+        if (createdAt) { insertData.created_at = createdAt; insertData.updated_at = createdAt; }
+        if (isClosed && createdAt) insertData.closed_at = createdAt;
+
+        const { error: insErr } = await supabase.from('tickets').insert(insertData);
+        if (insErr) { skipped++; continue; }
         count++;
       }
-      toast({ title: `${count} chamado(s) importado(s)`, description: skipped ? `${skipped} linha(s) ignorada(s).` : undefined });
+      toast({
+        title: `${count} chamado(s) importado(s)`,
+        description: `${skipped} ignorado(s), ${noUser} sem usuário correspondente.`,
+      });
       refetch();
       setImportDialogOpen(false);
       if (importRef.current) importRef.current.value = '';
@@ -203,7 +291,12 @@ export default function TIChamadosPage() {
   };
 
   const downloadTemplate = () => {
-    const ws = XLSX.utils.json_to_sheet([{ titulo: 'Exemplo de chamado', descricao: 'Detalhes opcionais' }]);
+    const ws = XLSX.utils.json_to_sheet([{
+      Data: new Date().toISOString(), Nome: 'João Silva', Setor: 'Comercial',
+      'Tipo de Problema': 'Descrição detalhada do problema', Urgência: 'Média',
+      'Tipo do Chamado': 'Sistema Nomus', 'Classificação Técnica': 'Configuração',
+      Status: 'Concluído', Problema: 'sim',
+    }]);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Chamados');
     XLSX.writeFile(wb, 'modelo-chamados.xlsx');
@@ -281,7 +374,7 @@ export default function TIChamadosPage() {
                         <p className="text-xs text-muted-foreground">Vazio</p>
                       </div>
                     ) : ticketsByStatus[status.id]?.map(ticket => (
-                      <Card key={ticket.id} className="cursor-pointer transition-all hover:shadow-md" draggable onDragStart={e => handleDragStart(e, ticket.id)} onClick={() => setSelectedTicket(ticket)}>
+                      <Card key={ticket.id} className="cursor-pointer transition-all hover:shadow-md" draggable onDragStart={e => handleDragStart(e, ticket.id)} onClick={() => setSelectedTicketId(ticket.id)}>
                         <CardContent className="p-2.5">
                           <div className="mb-1.5 flex items-start justify-between gap-1">
                             <h4 className="line-clamp-2 text-xs font-medium leading-tight">{ticket.title}</h4>
@@ -319,7 +412,7 @@ export default function TIChamadosPage() {
       </div>
 
       {/* Ticket Detail */}
-      <Dialog open={!!selectedTicket} onOpenChange={() => setSelectedTicket(null)}>
+      <Dialog open={!!selectedTicket} onOpenChange={() => setSelectedTicketId(null)}>
         <DialogContent className="max-h-[90vh] max-w-2xl overflow-hidden">
           {selectedTicket && (
             <>
@@ -388,7 +481,7 @@ export default function TIChamadosPage() {
               </div>
               <DialogFooter className="gap-2">
                 <Button variant="destructive" size="sm" onClick={() => confirmDelete(selectedTicket.id)}><Trash2 className="mr-2 h-4 w-4" />Excluir</Button>
-                <Button variant="outline" onClick={() => setSelectedTicket(null)}>Fechar</Button>
+                <Button variant="outline" onClick={() => setSelectedTicketId(null)}>Fechar</Button>
               </DialogFooter>
             </>
           )}
@@ -423,7 +516,7 @@ export default function TIChamadosPage() {
       {/* Import XLSX Dialog */}
       <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Importar Chamados (XLSX)</DialogTitle><DialogDescription>Importe um lote de chamados via planilha Excel. Colunas: <strong>titulo</strong> (obrigatório) e <strong>descricao</strong>.</DialogDescription></DialogHeader>
+          <DialogHeader><DialogTitle>Importar Chamados (XLSX)</DialogTitle><DialogDescription>Colunas suportadas: <strong>Data, Nome, Setor, Tipo de Problema, Urgência, Tipo do Chamado, Classificação Técnica, Status, Problema</strong>. Nomes duplicados são diferenciados pelo setor; capitalização é normalizada.</DialogDescription></DialogHeader>
           <div className="space-y-3">
             <input ref={importRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImportXLSX} />
             <Button variant="outline" className="w-full" onClick={() => importRef.current?.click()}>
