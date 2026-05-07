@@ -17,6 +17,7 @@ import { ptBR } from 'date-fns/locale';
 export default function GuaritaDashboard() {
   const { profile } = useAuth();
   const { todayAppointments, allAppointments, isLoading, registerEntry, registerExit } = useGuaritaAppointments();
+  const { pending: pendingSimple, markReceived } = useGuaritaSimpleRequests();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
 
   const visitorsOnSite = todayAppointments.filter(a => a.entry_at && !a.exit_at).length;
