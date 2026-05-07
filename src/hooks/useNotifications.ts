@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { useEffect } from 'react';
+import { playNotificationBeep } from '@/lib/notificationSound';
 
 export interface Notification {
   id: string;
