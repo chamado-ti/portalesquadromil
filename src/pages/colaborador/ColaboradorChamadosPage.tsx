@@ -19,8 +19,9 @@ import { supabase } from '@/integrations/supabase/client';
 import {
   Plus, Ticket as TicketIcon, MessageSquare, Clock, Send, Loader2, ArrowLeft, Paperclip, CheckCircle, Image, Filter,
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { AlertCircle } from 'lucide-react';
 import { AttachmentList } from '@/components/AttachmentPreview';
 
 export default function ColaboradorChamadosPage() {
