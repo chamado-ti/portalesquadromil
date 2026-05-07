@@ -61,6 +61,23 @@ export function useColaboradorTickets() {
         .eq('created_by', user.id)
         .order('created_at', { ascending: false });
       if (error) throw error;
+
+      // Attach last message info for "aguardando resposta" indicator
+      const ids = (tickets || []).map(t => t.id);
+      if (ids.length > 0) {
+        const { data: msgs } = await supabase
+          .from('ticket_messages')
+          .select('ticket_id, sender_id, created_at, message')
+          .in('ticket_id', ids)
+          .order('created_at', { ascending: false });
+        const lastByTicket = new Map<string, any>();
+        (msgs || []).forEach(m => { if (!lastByTicket.has(m.ticket_id)) lastByTicket.set(m.ticket_id, m); });
+        (tickets as any).forEach((t: any) => {
+          const last = lastByTicket.get(t.id);
+          t.last_message = last || null;
+          t.awaiting_user = last && last.sender_id !== user.id;
+        });
+      }
       return tickets as Ticket[];
     },
     enabled: !!user?.id,
@@ -256,12 +273,15 @@ export function useColaboradorTickets() {
   useEffect(() => {
     if (!user?.id) return;
     const channel = supabase
-      .channel('colaborador-tickets-changes')
+      .channel(`colaborador-rt-${user.id}`)
       .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'tickets',
+        event: '*', schema: 'public', table: 'tickets',
         filter: `created_by=eq.${user.id}`,
+      }, () => {
+        queryClient.invalidateQueries({ queryKey: ['colaborador-tickets'] });
+      })
+      .on('postgres_changes', {
+        event: 'INSERT', schema: 'public', table: 'ticket_messages',
       }, () => {
         queryClient.invalidateQueries({ queryKey: ['colaborador-tickets'] });
       })

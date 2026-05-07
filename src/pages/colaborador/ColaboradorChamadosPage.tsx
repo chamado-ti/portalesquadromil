@@ -19,8 +19,9 @@ import { supabase } from '@/integrations/supabase/client';
 import {
   Plus, Ticket as TicketIcon, MessageSquare, Clock, Send, Loader2, ArrowLeft, Paperclip, CheckCircle, Image, Filter,
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { AlertCircle } from 'lucide-react';
 import { AttachmentList } from '@/components/AttachmentPreview';
 
 export default function ColaboradorChamadosPage() {
@@ -114,8 +115,11 @@ export default function ColaboradorChamadosPage() {
             <div className="flex-1">
               <h2 className="text-lg font-semibold">{selectedTicket.title}</h2>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span>Aberto em {format(new Date(selectedTicket.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</span>
+                <span>Aberto {formatDistanceToNow(new Date(selectedTicket.created_at), { addSuffix: true, locale: ptBR })}</span>
+                <span>•</span>
+                <span>{format(new Date(selectedTicket.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</span>
                 {selectedTicket.status && <Badge variant="outline" className={getStatusColor(selectedTicket.status.color)}>{selectedTicket.status.name}</Badge>}
+                {selectedTicket.urgency && <Badge variant="outline" className={getStatusColor(selectedTicket.urgency.color)}>⚡ {selectedTicket.urgency.name}</Badge>}
               </div>
             </div>
             <Button variant="outline" size="sm" className="text-emerald-600 border-emerald-300 hover:bg-emerald-50" onClick={handleMarkResolved}>
@@ -254,34 +258,52 @@ export default function ColaboradorChamadosPage() {
           </Card>
         ) : (
           <div className="space-y-2">
-            {filteredTickets.map(ticket => (
-              <Card key={ticket.id} className="cursor-pointer transition-all hover:shadow-md" onClick={() => setSelectedTicket(ticket)}>
-                <CardContent className="flex items-center justify-between p-4">
-                  <div className="flex items-center gap-4">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full" style={{ backgroundColor: ticket.status?.color ? `${ticket.status.color}20` : undefined }}>
-                      <TicketIcon className="h-5 w-5" style={{ color: ticket.status?.color }} />
-                    </div>
-                    <div>
-                      <p className="font-medium">{ticket.title}</p>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Clock className="h-3 w-3" />
-                        <span>{format(new Date(ticket.created_at), "dd/MM/yyyy", { locale: ptBR })}</span>
-                        {ticket.category && <><span>•</span><span>{ticket.category.name}</span></>}
-                        {ticket.attachments && ticket.attachments.length > 0 && <><span>•</span><Paperclip className="h-3 w-3" /><span>{ticket.attachments.length}</span></>}
+            {filteredTickets.map(ticket => {
+              const awaiting = (ticket as any).awaiting_user;
+              const isClosed = !!ticket.closed_at;
+              return (
+                <Card key={ticket.id}
+                  className={`cursor-pointer transition-all hover:shadow-md ${awaiting ? 'border-l-4 border-l-amber-500 bg-amber-50/40' : ''}`}
+                  onClick={() => setSelectedTicket(ticket)}>
+                  <CardContent className="flex items-center justify-between p-4">
+                    <div className="flex items-center gap-4">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full" style={{ backgroundColor: ticket.status?.color ? `${ticket.status.color}20` : undefined }}>
+                        <TicketIcon className="h-5 w-5" style={{ color: ticket.status?.color }} />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium">{ticket.title}</p>
+                          {awaiting && (
+                            <Badge className="bg-amber-500 text-white text-[10px] animate-pulse gap-1">
+                              <AlertCircle className="h-2.5 w-2.5" />Resposta nova
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Clock className="h-3 w-3" />
+                          <span>{formatDistanceToNow(new Date(ticket.created_at), { addSuffix: true, locale: ptBR })}</span>
+                          {ticket.category && <><span>•</span><span>{ticket.category.name}</span></>}
+                          {ticket.urgency && (
+                            <><span>•</span>
+                              <Badge variant="outline" className={`${getStatusColor(ticket.urgency.color)} text-[10px] py-0 h-4`}>{ticket.urgency.name}</Badge>
+                            </>
+                          )}
+                          {ticket.attachments && ticket.attachments.length > 0 && <><span>•</span><Paperclip className="h-3 w-3" /><span>{ticket.attachments.length}</span></>}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    {ticket.status && (
-                      <Badge variant="outline" className={getStatusColor(ticket.status.color)}>
-                        <div className="mr-1.5 h-2 w-2 rounded-full" style={{ backgroundColor: ticket.status.color }} />
-                        {ticket.status.name}
-                      </Badge>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                    <div className="flex items-center gap-3">
+                      {ticket.status && (
+                        <Badge variant="outline" className={getStatusColor(ticket.status.color)}>
+                          <div className="mr-1.5 h-2 w-2 rounded-full" style={{ backgroundColor: ticket.status.color }} />
+                          {ticket.status.name}
+                        </Badge>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         )}
       </div>
