@@ -50,7 +50,7 @@ export function useGuaritaSimpleRequests() {
           title: '🔔 Nova solicitação rápida',
           description: payload.new?.purpose || 'Solicitação na guarita',
         });
-        try { new Audio('/notification.mp3').play().catch(() => {}); } catch {}
+        playNotificationBeep();
       })
       .on('postgres_changes', {
         event: 'UPDATE', schema: 'public', table: 'appointments',
