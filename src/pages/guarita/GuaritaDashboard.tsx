@@ -5,11 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGuaritaAppointments } from '@/hooks/useGuaritaAppointments';
+import { useGuaritaSimpleRequests } from '@/hooks/useGuaritaSimpleRequests';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
-import { Calendar as CalendarIcon, QrCode, Users, Clock, CheckCircle, LogIn, LogOut, Car, FileText, AlertTriangle, Plus } from 'lucide-react';
+import { Calendar as CalendarIcon, QrCode, Users, Clock, CheckCircle, LogIn, LogOut, Car, FileText, AlertTriangle, Plus, Package, Building2, Bell } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Calendar } from '@/components/ui/calendar';
-import { format, isSameDay, parseISO } from 'date-fns';
+import { format, isSameDay, parseISO, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 export default function GuaritaDashboard() {
