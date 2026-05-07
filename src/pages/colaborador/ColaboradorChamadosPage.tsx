@@ -115,8 +115,11 @@ export default function ColaboradorChamadosPage() {
             <div className="flex-1">
               <h2 className="text-lg font-semibold">{selectedTicket.title}</h2>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span>Aberto em {format(new Date(selectedTicket.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</span>
+                <span>Aberto {formatDistanceToNow(new Date(selectedTicket.created_at), { addSuffix: true, locale: ptBR })}</span>
+                <span>•</span>
+                <span>{format(new Date(selectedTicket.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</span>
                 {selectedTicket.status && <Badge variant="outline" className={getStatusColor(selectedTicket.status.color)}>{selectedTicket.status.name}</Badge>}
+                {selectedTicket.urgency && <Badge variant="outline" className={getStatusColor(selectedTicket.urgency.color)}>⚡ {selectedTicket.urgency.name}</Badge>}
               </div>
             </div>
             <Button variant="outline" size="sm" className="text-emerald-600 border-emerald-300 hover:bg-emerald-50" onClick={handleMarkResolved}>
