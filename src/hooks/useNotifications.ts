@@ -96,6 +96,7 @@ export function useNotifications() {
           return [n, ...list];
         });
         toast({ title: n.title, description: n.message });
+        playNotificationBeep();
       })
       .on('postgres_changes', {
         event: 'UPDATE', schema: 'public', table: 'notifications',
