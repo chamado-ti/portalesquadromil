@@ -127,7 +127,60 @@ export default function GuaritaDashboard() {
           </Link>
         </div>
 
-        {/* Today's visitors - detailed */}
+        {/* Solicitações Rápidas — Tempo real */}
+        <Card className={pendingSimple.length > 0 ? 'border-2 border-amber-400 shadow-md' : ''}>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Package className={`h-5 w-5 ${pendingSimple.length > 0 ? 'text-amber-600' : 'text-muted-foreground'}`} />
+              Solicitações Rápidas
+              {pendingSimple.length > 0 && (
+                <Badge className="bg-amber-500 text-white animate-pulse ml-1">{pendingSimple.length} aguardando</Badge>
+              )}
+              <Link to="/guarita/solicitacoes" className="ml-auto text-xs font-normal text-primary hover:underline">Ver todas</Link>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {pendingSimple.length === 0 ? (
+              <div className="py-6 text-center text-sm text-muted-foreground">
+                <Bell className="mx-auto mb-2 h-8 w-8 opacity-30" />
+                Nenhuma solicitação pendente
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {pendingSimple.slice(0, 5).map(a => {
+                  const initials = a.requester?.full_name?.split(' ').map(p => p[0]).slice(0, 2).join('').toUpperCase() || '?';
+                  return (
+                    <div key={a.id} className="flex items-center gap-3 rounded-lg bg-amber-50 border border-amber-200 p-3 animate-fade-in">
+                      <Avatar className="h-10 w-10 ring-2 ring-amber-300">
+                        <AvatarImage src={a.requester?.avatar_url || undefined} />
+                        <AvatarFallback className="bg-amber-200 text-amber-900 text-xs font-semibold">{initials}</AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-medium text-sm truncate">{a.requester?.full_name || 'Usuário'}</p>
+                          {a.requester?.sector && (
+                            <Badge variant="outline" className="text-[10px] gap-1 bg-white">
+                              <Building2 className="h-2.5 w-2.5" />{a.requester.sector}
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-xs text-foreground/80 truncate">📦 {a.purpose}</p>
+                        <p className="text-[10px] text-muted-foreground">
+                          {format(new Date(a.created_at), 'HH:mm')} · {formatDistanceToNow(new Date(a.created_at), { addSuffix: true, locale: ptBR })}
+                        </p>
+                      </div>
+                      <Button size="sm" onClick={() => markReceived(a)} className="bg-emerald-600 hover:bg-emerald-700 shrink-0">
+                        <CheckCircle className="mr-1 h-3 w-3" />Recebido
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
