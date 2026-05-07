@@ -273,23 +273,6 @@ export function useColaboradorTickets() {
   useEffect(() => {
     if (!user?.id) return;
     const channel = supabase
-      .channel('colaborador-tickets-changes')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'tickets',
-        filter: `created_by=eq.${user.id}`,
-      }, () => {
-        queryClient.invalidateQueries({ queryKey: ['colaborador-tickets'] });
-      })
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [user?.id, queryClient]);
-
-  // Subscribe to realtime ticket updates
-  useEffect(() => {
-    if (!user?.id) return;
-    const channel = supabase
       .channel(`colaborador-rt-${user.id}`)
       .on('postgres_changes', {
         event: '*', schema: 'public', table: 'tickets',
