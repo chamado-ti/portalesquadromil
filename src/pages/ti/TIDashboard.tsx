@@ -43,7 +43,7 @@ export default function TIDashboard() {
     return status && !isClosedStatus(status.name);
   });
 
-  const criticalTickets = tickets.filter(t => {
+  const criticalTickets = openTickets.filter(t => {
     const urg = urgencies.find(u => u.id === t.urgency_id);
     return urg && urg.sort_order <= 1;
   });
