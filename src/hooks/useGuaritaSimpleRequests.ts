@@ -76,6 +76,13 @@ export function useGuaritaSimpleRequests() {
     toast({ title: 'Marcado como recebido' });
   };
 
+  const deleteRequest = async (a: SimpleRequest) => {
+    const { error } = await supabase.from('appointments').delete().eq('id', a.id);
+    if (error) { toast({ title: 'Erro ao excluir', description: error.message, variant: 'destructive' }); return; }
+    qc.invalidateQueries({ queryKey: ['guarita-simple-requests'] });
+    toast({ title: 'Solicitação excluída' });
+  };
+
   const items = query.data ?? [];
   return {
     items,
