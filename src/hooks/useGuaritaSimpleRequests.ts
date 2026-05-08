@@ -90,5 +90,6 @@ export function useGuaritaSimpleRequests() {
     received: items.filter(i => i.received_at),
     isLoading: query.isLoading,
     markReceived,
+    deleteRequest,
   };
 }
