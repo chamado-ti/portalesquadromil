@@ -36,12 +36,14 @@ export default function TIDashboard() {
     },
   });
 
+  const CLOSED_NAMES = ['finalizado', 'resolvido', 'concluido', 'concluído', 'fechado'];
+  const isClosedStatus = (name?: string) => !!name && CLOSED_NAMES.some(n => name.toLowerCase().includes(n));
   const openTickets = tickets.filter(t => {
     const status = statuses.find(s => s.id === t.status_id);
-    return status && status.sort_order < (statuses.length > 0 ? statuses[statuses.length - 1].sort_order : 999);
+    return status && !isClosedStatus(status.name);
   });
 
-  const criticalTickets = tickets.filter(t => {
+  const criticalTickets = openTickets.filter(t => {
     const urg = urgencies.find(u => u.id === t.urgency_id);
     return urg && urg.sort_order <= 1;
   });

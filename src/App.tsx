@@ -89,6 +89,7 @@ const App = () => (
                 <Route path="/ti/arquivos" element={<ProtectedRoute allowedRoles={['ti']}><TIArquivosPage /></ProtectedRoute>} />
                 <Route path="/ti/processos" element={<ProtectedRoute allowedRoles={['ti']}><TIProcessosPage /></ProtectedRoute>} />
                 <Route path="/ti/grupos" element={<ProtectedRoute allowedRoles={['ti']}><TIGruposPage /></ProtectedRoute>} />
+                <Route path="/ti/solicitacoes" element={<ProtectedRoute allowedRoles={['ti']}><GuaritaSolicitacoesPage /></ProtectedRoute>} />
 
                 <Route path="/guarita" element={<ProtectedRoute allowedRoles={['guarita']}><GuaritaDashboard /></ProtectedRoute>} />
                 <Route path="/guarita/agendar" element={<ProtectedRoute allowedRoles={['guarita']}><GuaritaAgendarPage /></ProtectedRoute>} />
