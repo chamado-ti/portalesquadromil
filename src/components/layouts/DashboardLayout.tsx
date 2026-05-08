@@ -30,6 +30,7 @@ const navItems: NavItem[] = [
   { label: 'Usuários', href: '/ti/usuarios', icon: Users, roles: ['ti'] },
   { label: 'Chamados', href: '/ti/chamados', icon: Ticket, roles: ['ti'] },
   { label: 'Agendamentos', href: '/ti/agendamentos', icon: Calendar, roles: ['ti'] },
+  { label: 'Solicitações', href: '/ti/solicitacoes', icon: Bell, roles: ['ti'] },
   { label: 'Tarefas', href: '/ti/tarefas', icon: ListTodo, roles: ['ti'] },
   { label: 'Kanban', href: '/ti/kanban', icon: LayoutGrid, roles: ['ti'] },
   { label: 'Agentes IA', href: '/ti/agentes', icon: Cpu, roles: ['ti'] },
