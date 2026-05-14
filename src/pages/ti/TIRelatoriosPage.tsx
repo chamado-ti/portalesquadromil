@@ -1,205 +1,180 @@
 import { useState, useMemo } from 'react';
 import { DashboardLayout } from '@/components/layouts/DashboardLayout';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { LoadingPage } from '@/components/ui/LoadingSpinner';
 import { useTickets } from '@/hooks/useTickets';
-import { useAppointments } from '@/hooks/useAppointments';
 import { downloadCSV } from '@/lib/csvExport';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
-import { Download, TrendingUp, TrendingDown, Minus, FileBarChart } from 'lucide-react';
-import { format, subMonths, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { subDays, format } from 'date-fns';
+import * as XLSX from 'xlsx';
 
-const COLORS = ['hsl(221, 83%, 53%)', 'hsl(142, 71%, 45%)', 'hsl(38, 92%, 50%)', 'hsl(0, 84%, 60%)', 'hsl(262, 83%, 58%)', 'hsl(198, 93%, 60%)'];
+// Components
+import { useReportData, ReportFiltersState } from '@/components/ti/relatorios/useReportData';
+import { ReportFilters } from '@/components/ti/relatorios/ReportFilters';
+import { ReportKPIs } from '@/components/ti/relatorios/ReportKPIs';
+import { ReportInsights } from '@/components/ti/relatorios/ReportInsights';
+
+// Tabs
+import { OperacionalTab } from '@/components/ti/relatorios/tabs/OperacionalTab';
+import { GestaoTab } from '@/components/ti/relatorios/tabs/GestaoTab';
+import { SLATab } from '@/components/ti/relatorios/tabs/SLATab';
+import { PerformanceTab } from '@/components/ti/relatorios/tabs/PerformanceTab';
+import { TendenciasTab } from '@/components/ti/relatorios/tabs/TendenciasTab';
+import { AuditoriaTab } from '@/components/ti/relatorios/tabs/AuditoriaTab';
 
 export default function TIRelatoriosPage() {
-  const { tickets, statuses } = useTickets();
-  const { appointments } = useAppointments();
-  const [selectedMonth, setSelectedMonth] = useState(format(new Date(), 'yyyy-MM'));
+  const { tickets, statuses, urgencies, categories, isLoading } = useTickets();
+  
+  // Estado inicial dos filtros (últimos 30 dias)
+  const [filters, setFilters] = useState<ReportFiltersState>({
+    dateRange: {
+      from: subDays(new Date(), 30),
+      to: new Date(),
+    },
+    sectors: [],
+    technicians: [],
+    statuses: [],
+    urgencies: [],
+    categories: [],
+    search: ''
+  });
 
-  const months = useMemo(() => {
-    const m = [];
-    for (let i = 0; i < 6; i++) {
-      const d = subMonths(new Date(), i);
-      m.push({ value: format(d, 'yyyy-MM'), label: format(d, 'MMMM yyyy', { locale: ptBR }) });
-    }
-    return m;
-  }, []);
+  // Processamento de dados
+  const report = useReportData(tickets, statuses, urgencies, categories, filters);
 
-  const monthStart = startOfMonth(new Date(selectedMonth + '-01'));
-  const monthEnd = endOfMonth(monthStart);
-  const prevMonthStart = startOfMonth(subMonths(monthStart, 1));
-  const prevMonthEnd = endOfMonth(prevMonthStart);
+  // Opções para os filtros
+  const filterOptions = useMemo(() => {
+    const sectors = Array.from(new Set(tickets.map(t => t.creator?.sector || 'Sem setor'))).sort();
+    const technicians = Array.from(new Set(tickets.filter(t => t.assigned_to).map(t => JSON.stringify({
+      id: t.assigned_to,
+      name: t.assignee?.full_name || 'Desconhecido'
+    })))).map(s => JSON.parse(s));
 
-  const currentTickets = tickets.filter(t => isWithinInterval(new Date(t.created_at), { start: monthStart, end: monthEnd }));
-  const prevTickets = tickets.filter(t => isWithinInterval(new Date(t.created_at), { start: prevMonthStart, end: prevMonthEnd }));
+    return {
+      sectors,
+      technicians,
+      statuses: statuses.map(s => ({ id: s.id, name: s.name })),
+      urgencies: urgencies.map(u => ({ id: u.id, name: u.name })),
+      categories: categories.map(c => ({ id: c.id, name: c.name }))
+    };
+  }, [tickets, statuses, urgencies, categories]);
 
-  // By sector
-  const bySector = useMemo(() => {
-    const map: Record<string, number> = {};
-    currentTickets.forEach(t => {
-      const sector = t.creator?.sector || 'Sem setor';
-      map[sector] = (map[sector] || 0) + 1;
-    });
-    return Object.entries(map).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
-  }, [currentTickets]);
-
-  // By status
-  const byStatus = useMemo(() => {
-    const map: Record<string, number> = {};
-    currentTickets.forEach(t => {
-      const status = statuses.find(s => s.id === t.status_id)?.name || 'Desconhecido';
-      map[status] = (map[status] || 0) + 1;
-    });
-    return Object.entries(map).map(([name, value]) => ({ name, value }));
-  }, [currentTickets, statuses]);
-
-  const change = prevTickets.length > 0 ? ((currentTickets.length - prevTickets.length) / prevTickets.length * 100) : 0;
-
-  const handleExport = () => {
-    downloadCSV(
-      currentTickets.map(t => ({
-        titulo: t.title,
-        setor: t.creator?.sector || '',
-        solicitante: t.creator?.full_name || '',
-        status: statuses.find(s => s.id === t.status_id)?.name || '',
-        criado: t.created_at,
-      })),
-      `relatorio-${selectedMonth}`,
-      [
-        { key: 'titulo', label: 'Título' },
-        { key: 'setor', label: 'Setor' },
-        { key: 'solicitante', label: 'Solicitante' },
-        { key: 'status', label: 'Status' },
-        { key: 'criado', label: 'Criado em' },
-      ]
-    );
+  // KPIs formatados para o componente
+  const kpiData = {
+    ...report.timeMetrics,
+    totalCount: report.filteredTickets.length,
+    sectorsCount: new Set(report.filteredTickets.map(t => t.creator?.sector || 'Sem setor')).size,
+    urgentRate: report.filteredTickets.length > 0 
+      ? ((report.filteredTickets.filter(t => {
+          const urgency = urgencies.find(u => u.id === t.urgency_id)?.name.toLowerCase();
+          return urgency === 'urgente' || urgency === 'crítico' || urgency === 'alta';
+        }).length / report.filteredTickets.length) * 100).toFixed(0)
+      : 0
   };
+
+  const handleExport = (formatType: 'csv' | 'excel' | 'pdf') => {
+    const dataToExport = report.filteredTickets.map(t => ({
+      'ID': t.id.slice(0, 8),
+      'Título': t.title,
+      'Solicitante': t.creator?.full_name || 'Desconhecido',
+      'Setor': t.creator?.sector || 'Sem setor',
+      'Técnico': t.assignee?.full_name || 'Não atribuído',
+      'Status': statuses.find(s => s.id === t.status_id)?.name || 'Desconhecido',
+      'Urgência': urgencies.find(u => u.id === t.urgency_id)?.name || 'N/A',
+      'Categoria': categories.find(c => c.id === t.category_id)?.name || 'N/A',
+      'Criado em': format(new Date(t.created_at), 'dd/MM/yyyy HH:mm'),
+      'Finalizado em': t.closed_at ? format(new Date(t.closed_at), 'dd/MM/yyyy HH:mm') : 'Pendente'
+    }));
+
+    if (formatType === 'csv') {
+      downloadCSV(
+        dataToExport as any,
+        `relatorio-ti-${format(new Date(), 'yyyy-MM-dd')}`,
+        Object.keys(dataToExport[0]).map(k => ({ key: k, label: k }))
+      );
+    } else if (formatType === 'excel') {
+      const ws = XLSX.utils.json_to_sheet(dataToExport);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Relatório de Chamados");
+      XLSX.writeFile(wb, `relatorio-ti-${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
+    } else if (formatType === 'pdf') {
+      window.print();
+    }
+  };
+
+  if (isLoading) return <LoadingPage message="Processando dados analíticos..." />;
 
   return (
     <DashboardLayout>
-      <div className="animate-fade-in space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-bold">Relatórios</h2>
-            <p className="text-muted-foreground">Análise mensal por setores</p>
+      <div className="animate-fade-in space-y-8 pb-10 print:p-0 print:space-y-4">
+        {/* Header - Hidden in print */}
+        <div className="flex flex-col gap-1 print:hidden">
+          <h2 className="text-3xl font-bold tracking-tight">Inteligência de Dados</h2>
+          <p className="text-muted-foreground">Visão analítica e estratégica do suporte técnico</p>
+        </div>
+
+        {/* Filters - Hidden in print */}
+        <div className="print:hidden">
+          <ReportFilters 
+            filters={filters} 
+            setFilters={setFilters} 
+            onExport={handleExport}
+            options={filterOptions}
+          />
+        </div>
+
+        {/* KPIs Section */}
+        <ReportKPIs 
+          data={kpiData} 
+          previousData={report.previousTickets}
+          evolutionData={report.trendData.evolution}
+        />
+
+        {/* Insights Section - Hidden in print if empty */}
+        <ReportInsights insights={report.insights} />
+
+        {/* Tabs Section */}
+        <Tabs defaultValue="operacional" className="w-full">
+          <TabsList className="w-full justify-start border-b rounded-none h-auto p-0 bg-transparent space-x-6 print:hidden">
+            <TabsTrigger value="operacional" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-1 pb-3 pt-2 text-xs font-bold uppercase tracking-wider">Operacional</TabsTrigger>
+            <TabsTrigger value="gestao" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-1 pb-3 pt-2 text-xs font-bold uppercase tracking-wider">Gestão</TabsTrigger>
+            <TabsTrigger value="sla" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-1 pb-3 pt-2 text-xs font-bold uppercase tracking-wider">SLA</TabsTrigger>
+            <TabsTrigger value="performance" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-1 pb-3 pt-2 text-xs font-bold uppercase tracking-wider">Performance</TabsTrigger>
+            <TabsTrigger value="tendencias" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-1 pb-3 pt-2 text-xs font-bold uppercase tracking-wider">Tendências</TabsTrigger>
+            <TabsTrigger value="auditoria" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-1 pb-3 pt-2 text-xs font-bold uppercase tracking-wider">Auditoria</TabsTrigger>
+          </TabsList>
+
+          <div className="mt-6">
+            <TabsContent value="operacional" className="animate-in fade-in-50 duration-500">
+              <OperacionalTab data={report.operationalData} />
+            </TabsContent>
+            <TabsContent value="gestao" className="animate-in fade-in-50 duration-500">
+              <GestaoTab data={report.trendData} />
+            </TabsContent>
+            <TabsContent value="sla" className="animate-in fade-in-50 duration-500">
+              <SLATab data={report.timeMetrics} />
+            </TabsContent>
+            <TabsContent value="performance" className="animate-in fade-in-50 duration-500">
+              <PerformanceTab tickets={report.filteredTickets} />
+            </TabsContent>
+            <TabsContent value="tendencias" className="animate-in fade-in-50 duration-500">
+              <TendenciasTab data={report.trendData} />
+            </TabsContent>
+            <TabsContent value="auditoria" className="animate-in fade-in-50 duration-500">
+              <AuditoriaTab data={report.operationalData} previousTickets={report.previousTickets} />
+            </TabsContent>
           </div>
-          <div className="flex gap-2">
-            <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-              <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {months.map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Button variant="outline" onClick={handleExport}><Download className="mr-2 h-4 w-4" />Exportar</Button>
-          </div>
-        </div>
-
-        {/* KPIs */}
-        <div className="grid gap-4 md:grid-cols-4">
-          <Card className="card-institutional">
-            <CardContent className="p-4">
-              <p className="text-sm text-muted-foreground">Chamados no Mês</p>
-              <p className="text-3xl font-bold">{currentTickets.length}</p>
-              <div className="mt-1 flex items-center gap-1 text-sm">
-                {change > 0 ? <TrendingUp className="h-4 w-4 text-destructive" /> : change < 0 ? <TrendingDown className="h-4 w-4 text-emerald-500" /> : <Minus className="h-4 w-4" />}
-                <span className={change > 0 ? 'text-destructive' : change < 0 ? 'text-emerald-500' : ''}>
-                  {Math.abs(change).toFixed(0)}% vs mês anterior
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="card-institutional">
-            <CardContent className="p-4">
-              <p className="text-sm text-muted-foreground">Setores Afetados</p>
-              <p className="text-3xl font-bold">{bySector.length}</p>
-            </CardContent>
-          </Card>
-          <Card className="card-institutional">
-            <CardContent className="p-4">
-              <p className="text-sm text-muted-foreground">Mês Anterior</p>
-              <p className="text-3xl font-bold">{prevTickets.length}</p>
-            </CardContent>
-          </Card>
-          <Card className="card-institutional">
-            <CardContent className="p-4">
-              <p className="text-sm text-muted-foreground">Visitas no Mês</p>
-              <p className="text-3xl font-bold">
-                {appointments.filter(a => isWithinInterval(new Date(a.scheduled_date), { start: monthStart, end: monthEnd })).length}
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="grid gap-6 lg:grid-cols-2">
-          {/* By Sector Chart */}
-          <Card className="card-institutional">
-            <CardHeader><CardTitle>Chamados por Setor</CardTitle></CardHeader>
-            <CardContent>
-              {bySector.length === 0 ? (
-                <p className="py-8 text-center text-muted-foreground">Sem dados no período</p>
-              ) : (
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={bySector}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" fontSize={12} />
-                    <YAxis allowDecimals={false} />
-                    <Tooltip />
-                    <Bar dataKey="value" fill="hsl(221, 83%, 53%)" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* By Status */}
-          <Card className="card-institutional">
-            <CardHeader><CardTitle>Distribuição por Status</CardTitle></CardHeader>
-            <CardContent>
-              {byStatus.length === 0 ? (
-                <p className="py-8 text-center text-muted-foreground">Sem dados no período</p>
-              ) : (
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie data={byStatus} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} label>
-                      {byStatus.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                    </Pie>
-                    <Legend />
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Sector detail table */}
-        <Card className="card-institutional">
-          <CardHeader><CardTitle>Detalhamento por Setor</CardTitle></CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {bySector.map(s => (
-                <div key={s.name} className="flex items-center justify-between rounded-lg border p-3">
-                  <span className="font-medium">{s.name}</span>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline">{s.value} chamado{s.value > 1 ? 's' : ''}</Badge>
-                    {(() => {
-                      const prev = prevTickets.filter(t => (t.creator?.sector || 'Sem setor') === s.name).length;
-                      const diff = s.value - prev;
-                      if (diff > 0) return <Badge className="bg-destructive/10 text-destructive">↑ +{diff}</Badge>;
-                      if (diff < 0) return <Badge className="bg-emerald-500/10 text-emerald-600">↓ {diff}</Badge>;
-                      return <Badge variant="outline">= 0</Badge>;
-                    })()}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        </Tabs>
       </div>
+
+      {/* Print Overlay for current active tab if needed - Simplified as window.print prints the DOM */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media print {
+          body { background: white !important; }
+          .print\:hidden { display: none !important; }
+          .card-institutional { border: 1px solid #eee !important; box-shadow: none !important; }
+          @page { margin: 1cm; }
+        }
+      `}} />
     </DashboardLayout>
   );
 }
