@@ -1,3 +1,8 @@
+/**
+ * PORTAL ESQUADROMIL - DASHBOARD LAYOUT (v2.1.0)
+ * Data: 2026-05-14
+ * Descrição: Layout institucional com navegação agrupada e suporte a múltiplos perfis.
+ */
 import { useState, useMemo } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
@@ -13,7 +18,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useAuth } from '@/contexts/AuthContext';
-import { signOut, getRoleLabel, getRoleColor, type AppRole } from '@/lib/auth';
+import { signOut, getRoleLabel, type AppRole } from '@/lib/auth';
 import { useToast } from '@/hooks/use-toast';
 import { useSystemSettings } from '@/hooks/useSystemSettings';
 import { useNotifications } from '@/hooks/useNotifications';
@@ -28,15 +33,15 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  // TI Grouped
+  // --- TI ADMIN GROUPED ---
   { label: 'Dashboard', href: '/ti', icon: LayoutDashboard, roles: ['ti'], group: 'Principal' },
   { label: 'Workspace', href: '/ti/workspace', icon: LayoutGrid, roles: ['ti'], group: 'Principal' },
   
   { label: 'Chamados', href: '/ti/chamados', icon: Ticket, roles: ['ti'], group: 'Operações' },
   { label: 'Agendamentos', href: '/ti/agendamentos', icon: Calendar, roles: ['ti'], group: 'Operações' },
+  { label: 'Reserva Auditório', href: '/ti/reserva-auditorio', icon: Building2, roles: ['ti'], group: 'Operações' },
   { label: 'Solicitações', href: '/ti/solicitacoes', icon: Bell, roles: ['ti'], group: 'Operações' },
   { label: 'Grupos', href: '/ti/grupos', icon: MessageSquare, roles: ['ti'], group: 'Operações' },
-  { label: 'Reserva Auditório', href: '/ti/reserva-auditorio', icon: Building2, roles: ['ti'], group: 'Operações' },
 
   { label: 'Agentes IA', href: '/ti/agentes', icon: Cpu, roles: ['ti'], group: 'IA & Automação' },
   { label: 'Assistente IA', href: '/ti/assistente', icon: Bot, roles: ['ti'], group: 'IA & Automação' },
@@ -44,34 +49,30 @@ const navItems: NavItem[] = [
 
   { label: 'Usuários', href: '/ti/usuarios', icon: Users, roles: ['ti'], group: 'Administração' },
   { label: 'Arquivos', href: '/ti/arquivos', icon: FolderOpen, roles: ['ti'], group: 'Administração' },
-  { label: 'Logs', href: '/ti/logs', icon: FileText, roles: ['ti'], group: 'Administração' },
+  { label: 'Relatórios', href: '/ti/relatorios', icon: BarChart3, roles: ['ti'], group: 'Administração' },
   { label: 'Módulos', href: '/ti/modulos', icon: Blocks, roles: ['ti'], group: 'Administração' },
+  { label: 'Logs Sistema', href: '/ti/logs', icon: FileText, roles: ['ti'], group: 'Administração' },
   { label: 'Configurações', href: '/ti/configuracoes', icon: Settings, roles: ['ti'], group: 'Administração' },
 
-  // Guarita
-  { label: 'Painel', href: '/guarita', icon: LayoutDashboard, roles: ['guarita'] },
+  // --- GUARITA GROUPED ---
+  { label: 'Painel Guarita', href: '/guarita', icon: LayoutDashboard, roles: ['guarita'] },
   { label: 'Novo Agendamento', href: '/guarita/agendar', icon: Plus, roles: ['guarita'] },
   { label: 'Solicitações', href: '/guarita/solicitacoes', icon: Bell, roles: ['guarita'] },
   { label: 'Leitura QR Code', href: '/guarita/qrcode', icon: QrCode, roles: ['guarita'] },
-  { label: 'Meus Chamados', href: '/guarita/chamados', icon: Ticket, roles: ['guarita'] },
-  { label: 'Histórico', href: '/guarita/historico', icon: History, roles: ['guarita'] },
 
-  // Colaborador
+  // --- COLABORADOR GROUPED ---
   { label: 'Início', href: '/colaborador', icon: LayoutDashboard, roles: ['colaborador'] },
-  { label: 'Assistente IA', href: '/colaborador/assistente', icon: Bot, roles: ['colaborador'] },
-  { label: 'Meus Agentes', href: '/colaborador/agentes', icon: Cpu, roles: ['colaborador'] },
+  { label: 'Reserva Auditório', href: '/colaborador/reserva-auditorio', icon: Building2, roles: ['colaborador'] },
   { label: 'Meus Chamados', href: '/colaborador/chamados', icon: Ticket, roles: ['colaborador'] },
   { label: 'Agendamentos', href: '/colaborador/agendamentos', icon: Calendar, roles: ['colaborador'] },
-  { label: 'Solicitar à Guarita', href: '/colaborador/solicitar', icon: Plus, roles: ['colaborador'] },
-  { label: 'Grupos', href: '/colaborador/grupos', icon: MessageSquare, roles: ['colaborador'] },
-  { label: 'Reserva Auditório', href: '/colaborador/reserva-auditorio', icon: Building2, roles: ['colaborador'] },
+  { label: 'Assistente IA', href: '/colaborador/assistente', icon: Bot, roles: ['colaborador'] },
+  { label: 'Grupos / Chat', href: '/colaborador/grupos', icon: MessageSquare, roles: ['colaborador'] },
 ];
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { toast } = useToast();
   const { profile, role } = useAuth();
   const { getSetting } = useSystemSettings();
   const { unreadCount } = useNotifications();
@@ -79,7 +80,9 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const customLogo = getSetting('company_logo') as { url?: string } | undefined;
   const logoSrc = customLogo?.url || logoEsquadromil;
 
-  const filteredNavItems = navItems.filter(item => role && item.roles.includes(role));
+  const filteredNavItems = useMemo(() => 
+    navItems.filter(item => role && item.roles.includes(role as AppRole)),
+  [role]);
   
   const groupedItems = useMemo(() => {
     const groups: Record<string, NavItem[]> = {};
@@ -130,7 +133,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           <div className="space-y-8">
             {Object.entries(groupedItems).map(([group, items]) => (
               <div key={group} className="space-y-2">
-                {!collapsed && (
+                {!collapsed && items.length > 0 && group !== 'Geral' && (
                   <h3 className="px-4 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 mb-4">{group}</h3>
                 )}
                 <div className="space-y-1">
