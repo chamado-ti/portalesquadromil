@@ -262,20 +262,61 @@ div[style*="Edit with Lovable"],
   }
 
   /* Shimmer effect for skeletons */
-  .shimmer {
-    background: linear-gradient(
-      90deg,
-      hsl(var(--muted)) 25%,
-      hsl(var(--muted) / 0.6) 50%,
-      hsl(var(--muted)) 75%
-    );
-    background-size: 200% 100%;
-    animation: shimmer 1.5s infinite;
+  /* Premium Utilities */
+  .glass {
+    @apply bg-white/70 backdrop-blur-md border border-white/20 shadow-glass;
+  }
+  
+  .glass-dark {
+    @apply bg-[#1e222d]/80 backdrop-blur-lg border border-white/5 shadow-2xl;
   }
 
+  .mesh-gradient {
+    background-color: #f8fafc;
+    background-image: 
+      radial-gradient(at 0% 0%, hsla(215, 90%, 32%, 0.05) 0px, transparent 50%),
+      radial-gradient(at 100% 0%, hsla(215, 85%, 45%, 0.05) 0px, transparent 50%),
+      radial-gradient(at 100% 100%, hsla(215, 95%, 22%, 0.05) 0px, transparent 50%),
+      radial-gradient(at 0% 100%, hsla(215, 40%, 55%, 0.05) 0px, transparent 50%);
+  }
+
+  .institutional-grid {
+    background-size: 40px 40px;
+    background-image: 
+      linear-gradient(to right, hsl(var(--neutral-200) / 0.3) 1px, transparent 1px),
+      linear-gradient(to bottom, hsl(var(--neutral-200) / 0.3) 1px, transparent 1px);
+  }
+
+  /* Animations */
   @keyframes shimmer {
-    0% { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
+    0% { background-position: -1000px 0; }
+    100% { background-position: 1000px 0; }
+  }
+
+  .shimmer {
+    background: linear-gradient(90deg, #f0f0f0 25%, #f8f8f8 50%, #f0f0f0 75%);
+    background-size: 1000px 100%;
+    animation: shimmer 2s infinite linear;
+  }
+
+  .hover-scale {
+    @apply transition-transform duration-300 hover:scale-[1.02] active:scale-[0.98];
+  }
+
+  .shadow-premium {
+    box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Custom Scrollbar - Premium */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-slate-200 rounded-full hover:bg-slate-300 transition-colors;
   }
 
   /* Slide in from left */

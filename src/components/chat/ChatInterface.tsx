@@ -2,10 +2,15 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Bot, Send, Trash2, User, Plus, MessageSquare, Paperclip, X, FileText, Image as ImageIcon, Mic } from 'lucide-react';
+import { 
+  Bot, Send, Trash2, User, Plus, MessageSquare, Paperclip, X, 
+  FileText, Image as ImageIcon, Mic, ChevronRight, Sparkles, 
+  Clock, Calendar, History, MoreVertical, Search, Settings, 
+  Layout, ArrowLeft, RefreshCcw, ThumbsUp, ThumbsDown, Copy
+} from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import ReactMarkdown from 'react-markdown';
-import { format } from 'date-fns';
+import { format, isToday, isYesterday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import type { FileAttachment } from '@/hooks/useAIAssistant';
@@ -44,25 +49,6 @@ interface ChatInterfaceProps {
   renderTicketActions?: (msg: ChatMsg) => React.ReactNode;
 }
 
-function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      resolve(result.split(',')[1]);
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
-function getFileType(mime: string): FileAttachment['type'] {
-  if (mime.startsWith('image/')) return 'image';
-  if (mime === 'application/pdf') return 'pdf';
-  if (mime.startsWith('audio/')) return 'audio';
-  return 'file';
-}
-
 export function ChatInterface({
   messages, isLoading, inputValue, onInputChange, onSend, onNewChat, onClear,
   conversations, activeConversationId, onSelectConversation, onDeleteConversation,
@@ -70,6 +56,7 @@ export function ChatInterface({
 }: ChatInterfaceProps) {
   const [pendingFiles, setPendingFiles] = useState<FileAttachment[]>([]);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -78,157 +65,252 @@ export function ChatInterface({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isLoading]);
 
-  const processFiles = useCallback(async (files: FileList | File[]) => {
-    const fileArr = Array.from(files);
-    const attachments: FileAttachment[] = [];
-    for (const file of fileArr) {
-      if (file.size > 10 * 1024 * 1024) continue;
-      try {
-        const base64 = await fileToBase64(file);
-        attachments.push({ type: getFileType(file.type), name: file.name, base64, mimeType: file.type });
-      } catch {}
-    }
-    if (attachments.length > 0) setPendingFiles(prev => [...prev, ...attachments]);
-  }, []);
-
-  const handlePaste = useCallback(async (e: React.ClipboardEvent) => {
-    const items = e.clipboardData.items;
-    const files: File[] = [];
-    for (let i = 0; i < items.length; i++) {
-      if (items[i].kind === 'file') {
-        const file = items[i].getAsFile();
-        if (file) files.push(file);
-      }
-    }
-    if (files.length > 0) {
-      e.preventDefault();
-      await processFiles(files);
-    }
-  }, [processFiles]);
-
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) await processFiles(e.target.files);
-    e.target.value = '';
-  };
-
-  const removePendingFile = (idx: number) => setPendingFiles(prev => prev.filter((_, i) => i !== idx));
-
   const handleSend = () => {
     if ((!inputValue.trim() && pendingFiles.length === 0) || isLoading) return;
     onSend(pendingFiles.length > 0 ? pendingFiles : undefined);
     setPendingFiles([]);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
+  const groupConversations = () => {
+    const today: ConversationItem[] = [];
+    const yesterday: ConversationItem[] = [];
+    const older: ConversationItem[] = [];
+
+    conversations.forEach(c => {
+      const date = c.updated_at ? new Date(c.updated_at) : new Date();
+      if (isToday(date)) today.push(c);
+      else if (isYesterday(date)) yesterday.push(c);
+      else older.push(c);
+    });
+
+    return { today, yesterday, older };
   };
 
-  const fileIcon = (type: FileAttachment['type']) => {
-    if (type === 'image') return <ImageIcon className="h-3 w-3" />;
-    if (type === 'audio') return <Mic className="h-3 w-3" />;
-    return <FileText className="h-3 w-3" />;
-  };
-
-  const confirmDelete = (id: string) => setDeleteConfirmId(id);
-  const handleConfirmDelete = () => {
-    if (deleteConfirmId) {
-      onDeleteConversation(deleteConfirmId);
-      setDeleteConfirmId(null);
-    }
-  };
+  const { today, yesterday, older } = groupConversations();
 
   return (
-    <div className="flex h-[calc(100vh-8rem)] gap-4">
-      {/* Sidebar */}
-      <div className="hidden w-72 flex-shrink-0 flex-col rounded-xl border bg-card md:flex">
-        <div className="flex items-center justify-between border-b p-3">
-          <h3 className="text-sm font-semibold">Conversas</h3>
-          <Button variant="ghost" size="icon" onClick={onNewChat} className="h-8 w-8"><Plus className="h-4 w-4" /></Button>
+    <div className="flex h-[calc(100vh-100px)] -m-4 md:-m-6 bg-[#f9fafb] overflow-hidden rounded-xl shadow-2xl border">
+      {/* Enhanced Sidebar */}
+      <aside className={cn(
+        "bg-white border-r flex flex-col transition-all duration-300 z-30 relative shadow-sm",
+        sidebarOpen ? "w-72" : "w-0 overflow-hidden"
+      )}>
+        <div className="p-6 border-b bg-white/50 backdrop-blur">
+          <Button onClick={onNewChat} className="w-full h-11 rounded-xl shadow-lg shadow-primary/10 gap-2 font-bold transition-all hover:scale-[1.02] active:scale-[0.98]">
+            <Plus className="h-4 w-4" /> Novo Chat
+          </Button>
+          <div className="mt-4 relative group">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground transition-colors group-focus-within:text-primary" />
+            <input 
+              placeholder="Buscar histórico..." 
+              className="w-full pl-9 pr-4 py-2 bg-secondary/50 border-none text-xs rounded-xl focus:ring-2 ring-primary/20 transition-all outline-none"
+            />
+          </div>
         </div>
+
         <ScrollArea className="flex-1">
-          <div className="space-y-1 p-2">
-            {conversations.map(conv => (
-              <div key={conv.id} className={cn('group flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-accent', activeConversationId === conv.id && 'bg-accent')} onClick={() => onSelectConversation(conv)}>
-                <MessageSquare className="h-4 w-4 shrink-0 text-muted-foreground" />
-                <span className="flex-1 truncate">{conv.title}</span>
-                <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100" onClick={e => { e.stopPropagation(); confirmDelete(conv.id); }}>
-                  <Trash2 className="h-3 w-3" />
-                </Button>
+          <div className="p-3 space-y-6">
+            {[
+              { label: 'Hoje', items: today, icon: Clock },
+              { label: 'Ontem', items: yesterday, icon: Calendar },
+              { label: 'Anterior', items: older, icon: History }
+            ].map(group => group.items.length > 0 && (
+              <div key={group.label} className="space-y-1.5">
+                <h4 className="px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 flex items-center gap-1.5 mb-2">
+                  <group.icon className="h-3 w-3" /> {group.label}
+                </h4>
+                {group.items.map(conv => (
+                  <div 
+                    key={conv.id} 
+                    className={cn(
+                      'group flex items-center gap-3 rounded-xl px-4 py-3 text-sm transition-all cursor-pointer relative',
+                      activeConversationId === conv.id ? 'bg-primary/5 text-primary font-bold' : 'hover:bg-muted/50 text-muted-foreground'
+                    )}
+                    onClick={() => onSelectConversation(conv)}
+                  >
+                    <MessageSquare className={cn("h-4 w-4 shrink-0", activeConversationId === conv.id ? "text-primary" : "text-muted-foreground/50")} />
+                    <span className="flex-1 truncate pr-6">{conv.title}</span>
+                    <button 
+                      className="absolute right-2 opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-destructive/10 hover:text-destructive transition-all"
+                      onClick={e => { e.stopPropagation(); setDeleteConfirmId(conv.id); }}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
               </div>
             ))}
-            {conversations.length === 0 && <p className="py-8 text-center text-xs text-muted-foreground">Nenhuma conversa</p>}
+            {conversations.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-20 text-center px-6">
+                <div className="h-10 w-10 rounded-full bg-muted/50 flex items-center justify-center mb-3">
+                  <History className="h-5 w-5 text-muted-foreground/30" />
+                </div>
+                <p className="text-xs text-muted-foreground font-medium">Nenhum histórico</p>
+              </div>
+            )}
           </div>
         </ScrollArea>
-      </div>
 
-      {/* Chat */}
-      <div className="flex flex-1 flex-col overflow-hidden rounded-xl border bg-card">
-        <div className="flex items-center justify-between border-b px-4 py-3">
-          <div className="flex items-center gap-2">
-            <div className="rounded-lg bg-primary/10 p-1.5"><Bot className="h-5 w-5 text-primary" /></div>
-            <span className="font-semibold">{title}</span>
-          </div>
-          <div className="flex gap-1">
-            <Button variant="ghost" size="sm" className="md:hidden" onClick={onNewChat}><Plus className="h-4 w-4" /></Button>
-            {messages.length > 0 && <Button variant="ghost" size="sm" onClick={onClear}><Trash2 className="mr-1 h-3.5 w-3.5" /> Limpar</Button>}
+        <div className="p-4 border-t bg-muted/10">
+          <div className="flex items-center gap-3 p-3 rounded-xl bg-white shadow-sm border border-black/5">
+            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">TI</div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-bold truncate">Time de Operações</p>
+              <p className="text-[10px] text-muted-foreground truncate">Ambiente Corporativo</p>
+            </div>
+            <Settings className="h-4 w-4 text-muted-foreground cursor-pointer hover:rotate-90 transition-transform duration-500" />
           </div>
         </div>
+      </aside>
 
-        <div className="flex-1 overflow-y-auto p-4">
+      {/* Main Chat Area */}
+      <main className="flex-1 flex flex-col relative bg-white overflow-hidden">
+        {/* Toggle Sidebar Mobile */}
+        <div className="absolute top-4 left-4 z-20 md:hidden">
+          <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(!sidebarOpen)}>
+            <Layout className="h-5 w-5" />
+          </Button>
+        </div>
+
+        {/* Chat Header */}
+        <header className="flex items-center justify-between px-8 py-4 border-b bg-white/80 backdrop-blur sticky top-0 z-20">
+          <div className="flex items-center gap-4">
+            <div className="relative">
+              <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-primary to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-primary/20">
+                <Bot className="h-6 w-6" />
+              </div>
+              <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 bg-emerald-500 border-2 border-white rounded-full" />
+            </div>
+            <div>
+              <h1 className="text-sm font-bold text-foreground leading-none mb-1.5">{title}</h1>
+              <div className="flex items-center gap-2">
+                <span className="flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Online • Agente TI</p>
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" className="rounded-xl h-9 text-xs gap-2" onClick={onClear}>
+              <RefreshCcw className="h-3.5 w-3.5" /> Reiniciar
+            </Button>
+            <div className="h-8 w-[1px] bg-border mx-1" />
+            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl text-muted-foreground"><MoreVertical className="h-4 w-4" /></Button>
+          </div>
+        </header>
+
+        {/* Messages List */}
+        <ScrollArea className="flex-1 px-8 py-6">
           {messages.length === 0 ? (
-            <div className="flex h-full flex-col items-center justify-center py-12 text-center">
-              <div className="mb-4 rounded-2xl bg-primary/10 p-5"><Bot className="h-12 w-12 text-primary" /></div>
-              <h3 className="mb-2 text-lg font-semibold">{title}</h3>
-              <p className="max-w-md text-muted-foreground">{subtitle}</p>
-              {quickPrompts && quickPrompts.length > 0 && (
-                <div className="mt-6 flex flex-wrap justify-center gap-2">
-                  {quickPrompts.map(q => (
-                    <Button key={q} variant="outline" size="sm" onClick={() => onInputChange(q)}>{q}</Button>
-                  ))}
+            <div className="h-full flex flex-col items-center justify-center py-20 animate-fade-in">
+              <div className="relative mb-8">
+                <div className="h-20 w-20 rounded-[30%] bg-primary/5 flex items-center justify-center">
+                  <Sparkles className="h-10 w-10 text-primary animate-pulse" />
                 </div>
-              )}
+                <div className="absolute -top-2 -right-2 bg-primary text-white text-[10px] font-bold px-2 py-0.5 rounded-full">SaaS PRO</div>
+              </div>
+              <h2 className="text-xl font-bold mb-3 text-center tracking-tight">Como posso acelerar sua operação hoje?</h2>
+              <p className="text-sm text-muted-foreground text-center max-w-sm leading-relaxed mb-10">{subtitle}</p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full max-w-lg">
+                {quickPrompts?.map(q => (
+                  <button 
+                    key={q} 
+                    className="p-4 rounded-2xl bg-[#f9fafb] border border-black/5 hover:border-primary/20 hover:bg-white hover:shadow-xl hover:shadow-black/5 transition-all text-left group"
+                    onClick={() => onInputChange(q)}
+                  >
+                    <p className="text-xs font-bold text-primary mb-1 uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">Sugestão</p>
+                    <p className="text-sm font-medium text-foreground">{q}</p>
+                  </button>
+                ))}
+              </div>
             </div>
           ) : (
-            <div className="space-y-4">
-              {messages.map(msg => (
-                <div key={msg.id} className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
-                  <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${msg.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-                    {msg.role === 'user' ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
+            <div className="max-w-4xl mx-auto space-y-10 pb-10">
+              {messages.map((msg, idx) => (
+                <div 
+                  key={msg.id} 
+                  className={cn(
+                    "flex items-start gap-4 animate-in slide-in-from-bottom-2 duration-500",
+                    msg.role === 'user' ? "flex-row-reverse" : "flex-row"
+                  )}
+                >
+                  <div className={cn(
+                    "h-9 w-9 rounded-xl flex items-center justify-center shrink-0 shadow-sm",
+                    msg.role === 'user' ? "bg-primary text-white" : "bg-white border"
+                  )}>
+                    {msg.role === 'user' ? <User className="h-5 w-5" /> : <Bot className="h-5 w-5 text-primary" />}
                   </div>
-                  <div className={`max-w-[80%] rounded-xl p-3 ${msg.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-                    {msg.attachments && msg.attachments.length > 0 && (
-                      <div className="mb-2 flex flex-wrap gap-2">
-                        {msg.attachments.map((att, i) => (
-                          <div key={i} className="flex items-center gap-1 rounded bg-background/20 px-2 py-1 text-xs">
-                            {fileIcon(att.type)}
-                            <span className="max-w-[120px] truncate">{att.name}</span>
-                          </div>
-                        ))}
+                  
+                  <div className={cn(
+                    "flex flex-col gap-2 max-w-[85%]",
+                    msg.role === 'user' ? "items-end" : "items-start"
+                  )}>
+                    <div className={cn(
+                      "p-4 md:p-5 rounded-3xl shadow-sm border transition-all",
+                      msg.role === 'user' 
+                        ? "bg-primary text-white border-primary rounded-tr-none" 
+                        : "bg-white border-black/5 text-foreground rounded-tl-none hover:shadow-md"
+                    )}>
+                      {msg.attachments && msg.attachments.length > 0 && (
+                        <div className="mb-4 flex flex-wrap gap-2">
+                          {msg.attachments.map((att, i) => (
+                            <div key={i} className="flex items-center gap-2 rounded-xl bg-black/5 px-3 py-2 text-[11px] font-bold">
+                              <FileText className="h-3.5 w-3.5" />
+                              <span className="max-w-[120px] truncate">{att.name}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      
+                      <div className={cn(
+                        "prose prose-sm dark:prose-invert max-w-none text-sm md:text-base leading-relaxed",
+                        msg.role === 'user' ? "text-white" : "text-[#374151]"
+                      )}>
+                        {msg.role === 'assistant' ? (
+                          <ReactMarkdown components={{
+                            p: ({children}) => <p className="mb-4 last:mb-0">{children}</p>,
+                            ul: ({children}) => <ul className="list-disc pl-4 mb-4">{children}</ul>,
+                            code: ({children}) => <code className="bg-black/5 rounded px-1.5 py-0.5 font-mono text-[0.9em]">{children}</code>
+                          }}>
+                            {msg.content}
+                          </ReactMarkdown>
+                        ) : (
+                          <p className="whitespace-pre-wrap">{msg.content}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 px-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                        {format(msg.timestamp, 'HH:mm', { locale: ptBR })}
+                      </span>
+                      {msg.role === 'assistant' && !isLoading && idx === messages.length - 1 && (
+                        <div className="flex items-center gap-1">
+                          <button className="p-1 hover:text-primary transition-colors"><ThumbsUp className="h-3 w-3" /></button>
+                          <button className="p-1 hover:text-primary transition-colors"><ThumbsDown className="h-3 w-3" /></button>
+                          <button className="p-1 hover:text-primary transition-colors"><Copy className="h-3 w-3" /></button>
+                        </div>
+                      )}
+                    </div>
+                    {renderTicketActions && msg.ticketSuggestion && (
+                      <div className="mt-2 w-full animate-in zoom-in-95 duration-300">
+                        {renderTicketActions(msg)}
                       </div>
                     )}
-                    {msg.role === 'assistant' ? (
-                      <div className="prose prose-sm dark:prose-invert max-w-none text-sm"><ReactMarkdown>{msg.content}</ReactMarkdown></div>
-                    ) : (
-                      <p className="whitespace-pre-wrap text-sm">{msg.content}</p>
-                    )}
-                    <p className={`mt-1 text-xs ${msg.role === 'user' ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
-                      {format(msg.timestamp, 'HH:mm', { locale: ptBR })}
-                    </p>
-                    {renderTicketActions && msg.ticketSuggestion && renderTicketActions(msg)}
                   </div>
                 </div>
               ))}
-              {isLoading && messages[messages.length - 1]?.role !== 'assistant' && (
-                <div className="flex gap-3">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted"><Bot className="h-4 w-4" /></div>
-                  <div className="rounded-xl bg-muted p-3">
-                    <div className="flex gap-1">
-                      <span className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground/40" style={{ animationDelay: '0ms' }} />
-                      <span className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground/40" style={{ animationDelay: '150ms' }} />
-                      <span className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground/40" style={{ animationDelay: '300ms' }} />
+              
+              {isLoading && (
+                <div className="flex items-start gap-4 animate-pulse">
+                  <div className="h-9 w-9 rounded-xl bg-white border flex items-center justify-center shrink-0">
+                    <Bot className="h-5 w-5 text-primary opacity-50" />
+                  </div>
+                  <div className="bg-white border-black/5 p-5 rounded-3xl rounded-tl-none shadow-sm">
+                    <div className="flex gap-1.5">
+                      <div className="h-1.5 w-1.5 rounded-full bg-primary/30 animate-bounce" />
+                      <div className="h-1.5 w-1.5 rounded-full bg-primary/30 animate-bounce [animation-delay:0.2s]" />
+                      <div className="h-1.5 w-1.5 rounded-full bg-primary/30 animate-bounce [animation-delay:0.4s]" />
                     </div>
                   </div>
                 </div>
@@ -236,57 +318,98 @@ export function ChatInterface({
               <div ref={messagesEndRef} />
             </div>
           )}
-        </div>
+        </ScrollArea>
 
-        {/* Input area */}
-        <div className="border-t p-3">
-          {pendingFiles.length > 0 && (
-            <div className="mb-2 flex flex-wrap gap-2">
-              {pendingFiles.map((f, i) => (
-                <div key={i} className="flex items-center gap-1.5 rounded-lg border bg-muted px-2 py-1 text-xs">
-                  {fileIcon(f.type)}
-                  <span className="max-w-[100px] truncate">{f.name}</span>
-                  <button onClick={() => removePendingFile(i)} className="ml-1 rounded-full p-0.5 hover:bg-background"><X className="h-3 w-3" /></button>
-                </div>
-              ))}
+        {/* Enhanced Input Footer */}
+        <footer className="p-6 md:p-8 bg-white border-t relative">
+          <div className="max-w-4xl mx-auto">
+            {pendingFiles.length > 0 && (
+              <div className="mb-4 flex flex-wrap gap-2 animate-in slide-in-from-bottom-2">
+                {pendingFiles.map((f, i) => (
+                  <div key={i} className="flex items-center gap-2 rounded-xl border bg-white shadow-sm p-2 text-[11px] font-bold group">
+                    <div className="h-6 w-6 rounded-lg bg-primary/5 flex items-center justify-center text-primary">
+                      <FileText className="h-3.5 w-3.5" />
+                    </div>
+                    <span className="max-w-[150px] truncate">{f.name}</span>
+                    <button onClick={() => setPendingFiles(prev => prev.filter((_, idx) => idx !== i))} className="ml-1 p-1 rounded-lg hover:bg-secondary text-muted-foreground"><X className="h-3.5 w-3.5" /></button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="relative group bg-white rounded-[24px] border-2 border-black/5 focus-within:border-primary/20 shadow-lg shadow-black/[0.02] transition-all p-2">
+              <div className="flex items-end gap-2">
+                <input ref={fileInputRef} type="file" multiple className="hidden" onChange={async (e) => {
+                   if (e.target.files) {
+                     const files = Array.from(e.target.files);
+                     for (const file of files) {
+                       const reader = new FileReader();
+                       reader.onload = (re) => {
+                         const base64 = (re.target?.result as string).split(',')[1];
+                         setPendingFiles(prev => [...prev, { name: file.name, type: 'file', base64, mimeType: file.type }]);
+                       };
+                       reader.readAsDataURL(file);
+                     }
+                   }
+                }} />
+                
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-11 w-11 rounded-full shrink-0 hover:bg-primary/5 hover:text-primary transition-colors"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isLoading}
+                >
+                  <Paperclip className="h-5 w-5" />
+                </Button>
+
+                <Textarea
+                  ref={textareaRef}
+                  placeholder="Mensagem para o Agente..."
+                  value={inputValue}
+                  onChange={e => onInputChange(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())}
+                  disabled={isLoading}
+                  className="flex-1 min-h-[44px] max-h-[200px] border-none focus-visible:ring-0 resize-none text-base bg-transparent px-2 py-2.5 scrollbar-hide"
+                  rows={1}
+                />
+
+                <Button 
+                  onClick={handleSend} 
+                  disabled={isLoading || (!inputValue.trim() && pendingFiles.length === 0)} 
+                  className={cn(
+                    "h-11 w-11 rounded-full shrink-0 shadow-lg transition-all",
+                    isLoading ? "bg-muted" : "bg-primary hover:scale-105"
+                  )}
+                >
+                  <Send className="h-5 w-5" />
+                </Button>
+              </div>
             </div>
-          )}
-          <div className="flex items-end gap-2">
-            <input ref={fileInputRef} type="file" multiple accept="image/*,.pdf,audio/*" className="hidden" onChange={handleFileUpload} />
-            <Button variant="ghost" size="icon" className="shrink-0" onClick={() => fileInputRef.current?.click()} disabled={isLoading}>
-              <Paperclip className="h-4 w-4" />
-            </Button>
-            <Textarea
-              ref={textareaRef}
-              placeholder="Digite sua mensagem... (Shift+Enter para nova linha)"
-              value={inputValue}
-              onChange={e => onInputChange(e.target.value)}
-              onKeyDown={handleKeyDown}
-              onPaste={handlePaste}
-              disabled={isLoading}
-              className="min-h-[40px] max-h-[120px] flex-1 resize-none"
-              rows={1}
-            />
-            <Button onClick={handleSend} disabled={isLoading || (!inputValue.trim() && pendingFiles.length === 0)} className="shrink-0">
-              <Send className="h-4 w-4" />
-            </Button>
+            
+            <p className="mt-3 text-[10px] text-center font-bold text-muted-foreground/40 uppercase tracking-[0.2em]">
+              Powered by Esquadromil Intel Engine
+            </p>
           </div>
-        </div>
-      </div>
+        </footer>
+      </main>
 
-      {/* Delete Confirmation Dialog */}
+      {/* Delete Confirmation */}
       <AlertDialog open={!!deleteConfirmId} onOpenChange={open => !open && setDeleteConfirmId(null)}>
-        <AlertDialogContent>
+        <AlertDialogContent className="rounded-3xl border-none shadow-2xl">
           <AlertDialogHeader>
-            <AlertDialogTitle>Excluir conversa?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta ação é permanente. A conversa será removida definitivamente do sistema.
+            <AlertDialogTitle className="text-xl font-bold">Encerrar histórico?</AlertDialogTitle>
+            <AlertDialogDescription className="text-muted-foreground font-medium">
+              Esta conversa será removida permanentemente do banco de dados e não poderá ser recuperada.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Excluir
+          <AlertDialogFooter className="gap-2">
+            <AlertDialogCancel className="rounded-xl border-none bg-secondary font-bold">Manter</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => { if (deleteConfirmId) { onDeleteConversation(deleteConfirmId); setDeleteConfirmId(null); } }} 
+              className="rounded-xl bg-destructive text-destructive-foreground hover:bg-destructive/90 font-bold"
+            >
+              Sim, Excluir
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

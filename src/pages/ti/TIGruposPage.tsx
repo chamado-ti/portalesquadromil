@@ -9,7 +9,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Plus, Trash2, Users, MessageSquare, Tag, UserPlus, UserMinus,
-  Loader2, MoreVertical, Search, ChevronRight, Hash, ShieldCheck
+  Loader2, MoreVertical, Search, ChevronRight, Hash, ShieldCheck,
+  Settings, Bell, Info, ArrowLeft, MoreHorizontal, LayoutGrid, List
 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -31,10 +32,6 @@ export default function TIGruposPage() {
   const selectedGroup = groups.find(g => g.id === selectedGroupId) || null;
   
   const [showCreateGroup, setShowCreateGroup] = useState(false);
-  const [showManageTags, setShowManageTags] = useState(false);
-  const [showManageMembers, setShowManageMembers] = useState(false);
-  const [selectedTagForMembers, setSelectedTagForMembers] = useState<GroupTag | null>(null);
-  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [groupForm, setGroupForm] = useState({ name: '', description: '' });
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -44,161 +41,234 @@ export default function TIGruposPage() {
   );
 
   return (
-    <DashboardLayout>
-      <div className="flex h-[calc(100vh-140px)] bg-white rounded-3xl border shadow-sm overflow-hidden animate-fade-in">
+    <DashboardLayout title="Colaboração & Grupos">
+      <div className="flex h-[calc(100vh-140px)] -m-8 bg-white overflow-hidden shadow-2xl border-t">
         
-        {/* Sidebar de Grupos (WhatsApp Style) */}
-        <div className={cn(
-          "w-full md:w-80 flex flex-col border-r bg-muted/5",
+        {/* Workspace Sidebar (Slack Style) */}
+        <aside className={cn(
+          "w-80 flex flex-col border-r bg-[#1e222d] text-slate-300 transition-all duration-300",
           selectedGroupId && "hidden md:flex"
         )}>
-          <div className="p-4 border-b space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold tracking-tight">Conversas</h2>
-              <Button size="icon" variant="ghost" className="rounded-full h-9 w-9 bg-primary/5 text-primary" onClick={() => setShowCreateGroup(true)}>
-                <Plus className="h-5 w-5" />
-              </Button>
+          {/* Workspace Header */}
+          <div className="p-6 border-b border-white/5 flex items-center justify-between hover:bg-white/5 transition-colors cursor-pointer group">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-2xl bg-primary flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-primary/20">E</div>
+              <div>
+                <h2 className="text-sm font-bold text-white leading-none mb-1">Esquadromil</h2>
+                <div className="flex items-center gap-1.5">
+                  <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Workspace Ativo</p>
+                </div>
+              </div>
             </div>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input 
-                placeholder="Buscar grupos..." 
-                className="pl-9 h-10 bg-white border-none rounded-2xl shadow-sm text-sm"
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-              />
-            </div>
+            <Settings className="h-4 w-4 text-slate-500 group-hover:text-white transition-colors" />
           </div>
 
-          <div className="flex-1 overflow-y-auto scrollbar-hide p-2 space-y-1">
-            {loadingGroups ? (
-              <div className="flex flex-col items-center justify-center py-10 gap-2">
-                <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                <p className="text-xs text-muted-foreground">Carregando...</p>
+          <ScrollArea className="flex-1">
+            <div className="p-4 space-y-8">
+              {/* Actions Section */}
+              <div className="space-y-1">
+                <button className="w-full flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-white/5 text-sm transition-all group">
+                  <div className="h-8 w-8 rounded-lg bg-white/5 flex items-center justify-center group-hover:bg-primary transition-colors">
+                    <LayoutGrid className="h-4 w-4" />
+                  </div>
+                  <span>Visão Geral</span>
+                </button>
+                <button className="w-full flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-white/5 text-sm transition-all group" onClick={() => setShowCreateGroup(true)}>
+                  <div className="h-8 w-8 rounded-lg bg-white/5 flex items-center justify-center group-hover:bg-primary transition-colors">
+                    <Plus className="h-4 w-4" />
+                  </div>
+                  <span>Criar Novo Canal</span>
+                </button>
               </div>
-            ) : filteredGroups.length === 0 ? (
-              <div className="text-center py-10 px-4">
-                <MessageSquare className="mx-auto h-8 w-8 text-muted-foreground/30 mb-2" />
-                <p className="text-sm font-medium text-muted-foreground">Nenhum grupo encontrado</p>
-              </div>
-            ) : (
-              filteredGroups.map(group => {
-                const count = unread[group.id] || 0;
-                const isActive = selectedGroupId === group.id;
-                return (
-                  <div 
-                    key={group.id} 
-                    onClick={() => setSelectedGroupId(group.id)}
-                    className={cn(
-                      "flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all hover:bg-primary/5 group relative",
-                      isActive ? "bg-primary text-primary-foreground shadow-lg" : "text-foreground"
-                    )}
-                  >
-                    <div className={cn(
-                      "flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl font-bold text-lg shadow-sm",
-                      isActive ? "bg-white/20 text-white" : "bg-primary/10 text-primary"
-                    )}>
-                      {group.name.charAt(0).toUpperCase()}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <h3 className="font-bold text-sm truncate pr-2">{group.name}</h3>
-                        {count > 0 && (
-                          <span className={cn(
-                            "flex h-5 min-w-[20px] items-center justify-center rounded-full px-1 text-[10px] font-bold",
-                            isActive ? "bg-white text-primary" : "bg-primary text-white"
-                          )}>
-                            {count > 99 ? '99+' : count}
+
+              {/* Channels Section */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between px-3 mb-2">
+                  <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">Canais da Unidade</h3>
+                  <Badge variant="outline" className="bg-white/5 border-white/10 text-[9px] text-slate-400">{groups.length}</Badge>
+                </div>
+                
+                <div className="space-y-0.5">
+                  {loadingGroups ? (
+                    <div className="py-10 text-center"><Loader2 className="h-5 w-5 animate-spin mx-auto text-slate-600" /></div>
+                  ) : filteredGroups.map(group => {
+                    const unreadCount = unread[group.id] || 0;
+                    const isActive = selectedGroupId === group.id;
+                    return (
+                      <button 
+                        key={group.id}
+                        onClick={() => setSelectedGroupId(group.id)}
+                        className={cn(
+                          "w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all relative group",
+                          isActive ? "bg-primary text-white shadow-lg shadow-primary/20" : "hover:bg-white/5 text-slate-400"
+                        )}
+                      >
+                        <Hash className={cn("h-4 w-4", isActive ? "text-white" : "text-slate-600 group-hover:text-slate-400")} />
+                        <span className="flex-1 text-left truncate font-medium">{group.name}</span>
+                        {unreadCount > 0 && (
+                          <span className="absolute -right-1 top-1/2 -translate-y-1/2 h-5 min-w-[20px] px-1 rounded-full bg-rose-500 text-[10px] font-bold text-white flex items-center justify-center border-2 border-[#1e222d]">
+                            {unreadCount}
                           </span>
                         )}
-                      </div>
-                      <p className={cn(
-                        "text-[10px] truncate mt-0.5",
-                        isActive ? "text-white/70" : "text-muted-foreground"
-                      )}>
-                        {group.description || "Inicie uma conversa..."}
-                      </p>
-                    </div>
-                    {!isActive && (
-                      <div className="absolute right-2 bottom-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <ChevronRight className="h-4 w-4 text-primary" />
-                      </div>
-                    )}
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </div>
-
-        {/* Janela de Chat Ativa */}
-        <div className="flex-1 flex flex-col min-w-0 relative">
-          {selectedGroup ? (
-            <>
-              <GroupChat
-                group={selectedGroup}
-                onBack={() => setSelectedGroupId(null)}
-                isAdmin={role === 'ti'}
-                onManageTags={() => setShowManageTags(true)}
-              />
-              <TagManageDialog
-                groupId={selectedGroup.id}
-                open={showManageTags}
-                onOpenChange={setShowManageTags}
-                onManageMembers={(tag) => { setSelectedTagForMembers(tag); setShowManageMembers(true); }}
-              />
-              <MemberManageDialog
-                tag={selectedTagForMembers}
-                open={showManageMembers}
-                onOpenChange={setShowManageMembers}
-              />
-            </>
-          ) : (
-            <div className="flex-1 flex flex-col items-center justify-center bg-muted/5 p-8 text-center">
-              <div className="w-24 h-24 bg-white rounded-3xl flex items-center justify-center mb-6 shadow-sm border">
-                <MessageSquare className="h-10 w-10 text-primary/40" />
-              </div>
-              <h3 className="text-2xl font-bold text-foreground">Portal Grupos</h3>
-              <p className="text-muted-foreground max-w-sm mt-2">
-                Selecione uma conversa ao lado para visualizar as mensagens e interagir com a equipe em tempo real.
-              </p>
-              <div className="mt-8 flex gap-4">
-                <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground bg-white px-4 py-2 rounded-full border shadow-sm">
-                  <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" /> Criptografia End-to-End
+                      </button>
+                    );
+                  })}
                 </div>
-                <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground bg-white px-4 py-2 rounded-full border shadow-sm">
-                  <Hash className="h-3.5 w-3.5 text-blue-500" /> Menções Inteligentes
+              </div>
+
+              {/* Members Section (Static Placeholder) */}
+              <div className="space-y-2">
+                <h3 className="px-3 mb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">Mensagens Diretas</h3>
+                <div className="space-y-0.5 opacity-50">
+                  <div className="flex items-center gap-3 px-4 py-2 text-sm">
+                    <div className="h-2 w-2 rounded-full bg-emerald-500" />
+                    <span>Suporte TI</span>
+                  </div>
+                  <div className="flex items-center gap-3 px-4 py-2 text-sm">
+                    <div className="h-2 w-2 rounded-full bg-slate-600" />
+                    <span>Agente de Portaria</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </ScrollArea>
+
+          <div className="p-4 bg-black/20 border-t border-white/5">
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold shadow-lg">AD</div>
+                <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 bg-emerald-500 border-2 border-[#1e222d] rounded-full" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-bold text-white truncate">Administrador</p>
+                <p className="text-[10px] text-slate-500 uppercase tracking-tighter">Super Admin</p>
+              </div>
+              <MoreHorizontal className="h-4 w-4 text-slate-500" />
+            </div>
+          </div>
+        </aside>
+
+        {/* Main Content / Chat Area */}
+        <main className="flex-1 flex flex-col bg-[#f8fafc] relative">
+          {selectedGroup ? (
+            <div className="flex-1 flex flex-col h-full animate-in fade-in zoom-in-95 duration-300">
+              {/* Header do Chat */}
+              <header className="h-16 border-b bg-white/80 backdrop-blur px-8 flex items-center justify-between sticky top-0 z-20">
+                <div className="flex items-center gap-4">
+                  <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setSelectedGroupId(null)}>
+                    <ArrowLeft className="h-5 w-5" />
+                  </Button>
+                  <div>
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <Hash className="h-4 w-4 text-primary" />
+                      <h2 className="font-bold text-slate-900">{selectedGroup.name}</h2>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-widest truncate max-w-md">
+                      {selectedGroup.description || "Canal de comunicação operacional"}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="hidden lg:flex items-center -space-x-2 mr-4">
+                    {[1,2,3].map(i => (
+                      <div key={i} className="h-7 w-7 rounded-full border-2 border-white bg-slate-200 flex items-center justify-center text-[10px] font-bold">U{i}</div>
+                    ))}
+                    <div className="h-7 w-7 rounded-full border-2 border-white bg-primary/10 text-primary flex items-center justify-center text-[10px] font-bold">+12</div>
+                  </div>
+                  <Button variant="ghost" size="icon" className="rounded-xl h-9 w-9 text-slate-400 hover:text-primary"><Search className="h-4 w-4" /></Button>
+                  <Button variant="ghost" size="icon" className="rounded-xl h-9 w-9 text-slate-400 hover:text-primary"><Bell className="h-4 w-4" /></Button>
+                  <div className="h-6 w-[1px] bg-slate-200 mx-1" />
+                  <Button variant="ghost" size="icon" className="rounded-xl h-9 w-9 text-slate-400 hover:text-primary"><Info className="h-4 w-4" /></Button>
+                </div>
+              </header>
+
+              <div className="flex-1 overflow-hidden">
+                <GroupChat 
+                  group={selectedGroup} 
+                  onBack={() => setSelectedGroupId(null)} 
+                  isAdmin={role === 'ti'} 
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center p-12 text-center animate-fade-in">
+              <div className="relative mb-8">
+                <div className="h-24 w-24 rounded-[30%] bg-primary/5 flex items-center justify-center text-primary">
+                  <MessageSquare className="h-12 w-12 opacity-50" />
+                </div>
+                <div className="absolute -bottom-2 -right-2 h-10 w-10 rounded-2xl bg-white shadow-xl flex items-center justify-center text-emerald-500 border">
+                  <ShieldCheck className="h-5 w-5" />
+                </div>
+              </div>
+              <h2 className="text-2xl font-bold text-slate-900 mb-3 tracking-tight">Hub de Colaboração</h2>
+              <p className="text-slate-500 max-w-sm leading-relaxed mb-10 text-sm">
+                Selecione um canal à esquerda para iniciar uma conversa em tempo real com sua equipe.
+              </p>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-lg">
+                <div className="p-6 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer group">
+                  <Hash className="h-6 w-6 text-primary mb-4 group-hover:scale-110 transition-transform" />
+                  <h3 className="font-bold text-sm mb-1">Canais Públicos</h3>
+                  <p className="text-xs text-slate-400">Comunicação aberta por setor e unidade.</p>
+                </div>
+                <div className="p-6 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer group">
+                  <Users className="h-6 w-6 text-indigo-500 mb-4 group-hover:scale-110 transition-transform" />
+                  <h3 className="font-bold text-sm mb-1">Grupos Privados</h3>
+                  <p className="text-xs text-slate-400">Discussões restritas a membros convidados.</p>
                 </div>
               </div>
             </div>
           )}
-        </div>
+        </main>
       </div>
 
-      {/* Modais de Gerenciamento */}
+      {/* Create Group Dialog */}
       <Dialog open={showCreateGroup} onOpenChange={setShowCreateGroup}>
-        <DialogContent className="rounded-3xl max-w-sm">
-          <DialogHeader><DialogTitle className="font-bold">Novo Grupo de Conversa</DialogTitle></DialogHeader>
-          <div className="space-y-4 py-4">
+        <DialogContent className="rounded-3xl border-none shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold">Novo Canal de Comunicação</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6 py-4">
             <div className="space-y-2">
-              <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Nome do Grupo</Label>
-              <Input value={groupForm.name} onChange={e => setGroupForm(p => ({ ...p, name: e.target.value }))} placeholder="Ex: Suporte TI, Operacional..." className="h-12 rounded-2xl" />
+              <Label className="text-xs font-bold uppercase tracking-widest text-slate-500">Nome do Canal</Label>
+              <div className="relative">
+                <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Input 
+                  placeholder="ex: infraestrutura-ti" 
+                  className="pl-9 h-12 rounded-xl bg-slate-50 border-none ring-2 ring-transparent focus:ring-primary/20 transition-all"
+                  value={groupForm.name}
+                  onChange={e => setGroupForm(prev => ({ ...prev, name: e.target.value }))}
+                />
+              </div>
             </div>
             <div className="space-y-2">
-              <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Descrição (Opcional)</Label>
-              <Input value={groupForm.description} onChange={e => setGroupForm(p => ({ ...p, description: e.target.value }))} placeholder="Do que se trata este grupo?" className="h-12 rounded-2xl" />
+              <Label className="text-xs font-bold uppercase tracking-widest text-slate-500">Descrição (Opcional)</Label>
+              <Input 
+                placeholder="Sobre o que é este canal?" 
+                className="h-12 rounded-xl bg-slate-50 border-none ring-2 ring-transparent focus:ring-primary/20 transition-all"
+                value={groupForm.description}
+                onChange={e => setGroupForm(prev => ({ ...prev, description: e.target.value }))}
+              />
             </div>
           </div>
           <DialogFooter className="gap-2">
-            <Button variant="ghost" className="rounded-2xl h-12" onClick={() => setShowCreateGroup(false)}>Cancelar</Button>
-            <Button className="rounded-2xl h-12 px-8 font-bold shadow-institutional" disabled={!groupForm.name || isCreating} onClick={async () => { await createGroup(groupForm); setShowCreateGroup(false); }}>
-              {isCreating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null} Criar Grupo
+            <Button variant="ghost" onClick={() => setShowCreateGroup(false)} className="rounded-xl font-bold">Cancelar</Button>
+            <Button 
+              className="rounded-xl px-8 shadow-lg shadow-primary/20 font-bold h-11"
+              disabled={!groupForm.name || isCreating}
+              onClick={async () => {
+                await createGroup(groupForm);
+                setGroupForm({ name: '', description: '' });
+                setShowCreateGroup(false);
+              }}
+            >
+              {isCreating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
+              Criar Canal
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      <AlertDialog open={!!deleteConfirm} onOpenChange={o => !o && setDeleteConfirm(null)}>
         <AlertDialogContent className="rounded-3xl">
           <AlertDialogHeader>
             <AlertDialogTitle className="font-bold">Excluir este grupo?</AlertDialogTitle>

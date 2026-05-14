@@ -73,7 +73,8 @@ export default function TIUsuariosPage() {
       active: users.filter(u => u.is_active).length,
       inactive: users.filter(u => !u.is_active).length,
       recent,
-      topSector: topSector ? `${topSector[0]} (${topSector[1]})` : "—"
+      topSector: topSector ? `${topSector[0]} (${topSector[1]})` : "—",
+      bySector
     };
   }, [users]);
 
@@ -143,135 +144,140 @@ export default function TIUsuariosPage() {
   }
 
   return (
-    <DashboardLayout>
-      <div className="animate-fade-in space-y-8">
-        {/* Header Moderno */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h2 className="text-3xl font-bold tracking-tight">Gestão de Usuários</h2>
-            <p className="text-muted-foreground mt-1">Administre acessos, perfis e credenciais da organização.</p>
-          </div>
-          <Button onClick={() => { setSelectedUser(null); setFormDialogOpen(true); }} className="h-10 px-6 font-semibold shadow-institutional">
-            <Plus className="mr-2 h-4 w-4" /> Novo Usuário
-          </Button>
+    <DashboardLayout title="Gestão de Usuários">
+      <div className="space-y-8 animate-fade-in">
+        {/* KPI Row */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+          <StatCard title="Total" value={stats.total} icon={Users} color="text-blue-600" bg="bg-blue-50" />
+          <StatCard title="Ativos" value={stats.active} icon={UserCheck} color="text-emerald-600" bg="bg-emerald-50" />
+          <StatCard title="Inativos" value={stats.inactive} icon={UserX} color="text-rose-600" bg="bg-rose-50" />
+          <StatCard title="Novos (7d)" value={stats.recent} icon={UserPlus} color="text-indigo-600" bg="bg-indigo-50" />
+          <StatCard title="Top Setor" value={stats.topSector} icon={Activity} color="text-amber-600" bg="bg-amber-50" isText />
         </div>
 
-        {/* KPIs Modernos */}
-        <div className="grid gap-4 grid-cols-2 lg:grid-cols-5">
-          {[
-            { label: 'Total', value: stats.total, icon: Users, color: 'text-blue-600', bg: 'bg-blue-50' },
-            { label: 'Ativos', value: stats.active, icon: ShieldCheck, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-            { label: 'Inativos', value: stats.inactive, icon: UserX, color: 'text-rose-600', bg: 'bg-rose-50' },
-            { label: 'Setor Líder', value: stats.topSector, icon: Activity, color: 'text-indigo-600', bg: 'bg-indigo-50' },
-            { label: 'Recentes (7d)', value: stats.recent, icon: UserPlus, color: 'text-amber-600', bg: 'bg-amber-50' },
-          ].map((kpi, idx) => (
-            <Card key={idx} className="card-institutional border-none shadow-sm">
-              <CardContent className="p-4">
-                <div className={`p-2 w-fit rounded-lg ${kpi.bg} mb-3`}>
-                  <kpi.icon className={`h-4 w-4 ${kpi.color}`} />
-                </div>
-                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{kpi.label}</p>
-                <p className={cn("text-xl font-bold mt-0.5 truncate", kpi.label === 'Setor Líder' && "text-sm mt-2")}>{kpi.value}</p>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {/* Filtros e Tabela */}
-        <Card className="card-institutional border-none shadow-sm">
-          <CardHeader className="pb-3 px-6">
-            <div className="flex flex-col gap-4 md:flex-row md:items-center">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input placeholder="Buscar por nome, e-mail ou setor..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-9 h-10" />
+        <Card className="card-institutional border-none shadow-sm overflow-hidden">
+          <CardHeader className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 px-6">
+            <div className="space-y-1">
+              <CardTitle className="text-xl font-bold">Base de Colaboradores</CardTitle>
+              <p className="text-xs text-muted-foreground">Gerencie permissões, credenciais e acessos de todos os usuários do portal.</p>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar nome, email ou setor..."
+                  className="pl-9 w-[280px] h-10 bg-muted/30 border-none rounded-xl text-sm"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
               </div>
-              <div className="flex gap-2">
-                <Select value={roleFilter} onValueChange={v => setRoleFilter(v as AppRole | "all")}>
-                  <SelectTrigger className="w-full sm:w-36 h-10"><SelectValue placeholder="Perfil" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos Perfis</SelectItem>
-                    <SelectItem value="ti">TI</SelectItem>
-                    <SelectItem value="guarita">Guarita</SelectItem>
-                    <SelectItem value="colaborador">Colaborador</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select value={statusFilter} onValueChange={v => setStatusFilter(v as any)}>
-                  <SelectTrigger className="w-full sm:w-36 h-10"><SelectValue placeholder="Status" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos Status</SelectItem>
-                    <SelectItem value="active">Ativos</SelectItem>
-                    <SelectItem value="inactive">Inativos</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              <Select value={roleFilter} onValueChange={(v) => setRoleFilter(v as any)}>
+                <SelectTrigger className="w-[140px] h-10 bg-muted/30 border-none rounded-xl text-sm">
+                  <SelectValue placeholder="Cargo" />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl">
+                  <SelectItem value="all">Todos Cargos</SelectItem>
+                  <SelectItem value="ti">TI (Admin)</SelectItem>
+                  <SelectItem value="colaborador">Colaborador</SelectItem>
+                  <SelectItem value="guarita">Guarita</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button className="h-10 px-5 rounded-xl shadow-lg shadow-primary/20" onClick={() => { setSelectedUser(null); setFormDialogOpen(true); }}>
+                <Plus className="mr-2 h-4 w-4" /> Novo Usuário
+              </Button>
             </div>
           </CardHeader>
           <CardContent className="p-0">
-            {isLoading ? (
-              <div className="flex items-center justify-center py-20"><LoadingSpinner size="lg" /></div>
-            ) : filteredUsers.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 text-center">
-                <Users className="mb-4 h-12 w-12 text-muted-foreground/30" />
-                <h3 className="text-lg font-bold uppercase text-muted-foreground/50">Nenhum usuário encontrado</h3>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader className="bg-muted/30">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader className="bg-muted/30">
+                  <TableRow>
+                    <TableHead className="w-[80px] pl-6"></TableHead>
+                    <TableHead className="font-bold text-[10px] uppercase tracking-widest text-muted-foreground">Usuário</TableHead>
+                    <TableHead className="font-bold text-[10px] uppercase tracking-widest text-muted-foreground">Setor</TableHead>
+                    <TableHead className="font-bold text-[10px] uppercase tracking-widest text-muted-foreground">Cargo</TableHead>
+                    <TableHead className="font-bold text-[10px] uppercase tracking-widest text-muted-foreground">Status</TableHead>
+                    <TableHead className="font-bold text-[10px] uppercase tracking-widest text-muted-foreground text-right pr-6">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isLoading ? (
                     <TableRow>
-                      <TableHead className="px-6 h-12 font-bold uppercase text-[10px] tracking-widest text-muted-foreground">Usuário</TableHead>
-                      <TableHead className="h-12 font-bold uppercase text-[10px] tracking-widest text-muted-foreground">Setor</TableHead>
-                      <TableHead className="h-12 font-bold uppercase text-[10px] tracking-widest text-muted-foreground">Perfil</TableHead>
-                      <TableHead className="h-12 font-bold uppercase text-[10px] tracking-widest text-muted-foreground">Status</TableHead>
-                      <TableHead className="px-6 h-12 text-right font-bold uppercase text-[10px] tracking-widest text-muted-foreground">Ações</TableHead>
+                      <TableCell colSpan={6} className="h-40 text-center"><LoadingSpinner /></TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredUsers.map(user => (
-                      <TableRow key={user.id} className="cursor-pointer hover:bg-muted/20 transition-colors group" onClick={() => setDetailUser(user)}>
-                        <TableCell className="px-6 py-4">
-                          <div className="flex items-center gap-3">
-                            <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-primary/5 border border-primary/10 font-bold text-primary shadow-sm group-hover:scale-110 transition-transform">
-                              {(user as any).avatar_url ? <img src={(user as any).avatar_url} className="h-full w-full object-cover" /> : user.full_name.charAt(0).toUpperCase()}
-                            </div>
-                            <div className="min-w-0">
-                              <p className="font-bold text-sm text-foreground truncate">{user.full_name}</p>
-                              <p className="text-xs text-muted-foreground truncate">{user.email}</p>
-                            </div>
+                  ) : filteredUsers.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="h-40 text-center text-muted-foreground">Nenhum usuário encontrado</TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredUsers.map((user) => (
+                      <TableRow key={user.id} className="group hover:bg-muted/20 transition-colors cursor-pointer" onClick={() => setDetailUser(user)}>
+                        <TableCell className="pl-6">
+                          <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center font-bold text-primary overflow-hidden group-hover:scale-110 transition-transform">
+                            {(user as any).avatar_url ? (
+                              <img src={(user as any).avatar_url} alt="" className="h-full w-full object-cover" />
+                            ) : (
+                              user.full_name?.charAt(0).toUpperCase()
+                            )}
                           </div>
                         </TableCell>
-                        <TableCell><span className="text-xs font-semibold text-muted-foreground uppercase">{user.sector || "—"}</span></TableCell>
-                        <TableCell><UserRoleBadge role={user.role} /></TableCell>
-                        <TableCell><UserStatusBadge isActive={user.is_active} /></TableCell>
-                        <TableCell className="px-6 py-4 text-right" onClick={e => e.stopPropagation()}>
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span className="font-bold text-sm text-foreground">{user.full_name}</span>
+                            <span className="text-xs text-muted-foreground">{user.email}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="secondary" className="rounded-lg font-medium bg-muted/50 text-muted-foreground text-[10px]">{user.sector || "—"}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <UserRoleBadge role={user.role as AppRole} />
+                        </TableCell>
+                        <TableCell>
+                          <UserStatusBadge isActive={user.is_active} />
+                        </TableCell>
+                        <TableCell className="text-right pr-6" onClick={e => e.stopPropagation()}>
                           <DropdownMenu>
-                            <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8 rounded-full"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-48">
-                              <DropdownMenuItem onClick={() => { setSelectedUser(user); setFormDialogOpen(true); }}><Pencil className="mr-2 h-4 w-4" />Editar Perfil</DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => { setSelectedUser(user); setResetDialogOpen(true); }}><Key className="mr-2 h-4 w-4" />Trocar Senha</DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => toggleActiveStatus(user.id, user.is_active)}>
-                                {user.is_active ? <><UserX className="mr-2 h-4 w-4 text-rose-600" />Desativar</> : <><UserCheck className="mr-2 h-4 w-4 text-emerald-600" />Ativar</>}
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="rounded-full hover:bg-primary/5 hover:text-primary h-8 w-8">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48 rounded-xl shadow-xl">
+                              <DropdownMenuItem onClick={() => { setSelectedUser(user); setFormDialogOpen(true); }}>
+                                <Pencil className="mr-2 h-4 w-4" /> Editar Perfil
                               </DropdownMenuItem>
-                              {user.id !== currentUser?.id && (<><DropdownMenuSeparator /><DropdownMenuItem onClick={() => { setSelectedUser(user); setDeleteDialogOpen(true); }} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Excluir Usuário</DropdownMenuItem></>)}
+                              <DropdownMenuItem onClick={() => { setDetailUser(user); setShowPassword(false); }}>
+                                <Eye className="mr-2 h-4 w-4" /> Detalhes & Credenciais
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => { setSelectedUser(user); setResetDialogOpen(true); }}>
+                                <Key className="mr-2 h-4 w-4" /> Resetar Senha
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={() => toggleActiveStatus(user.id, user.is_active)} className={user.is_active ? "text-rose-600" : "text-emerald-600"}>
+                                {user.is_active ? <UserX className="mr-2 h-4 w-4" /> : <UserCheck className="mr-2 h-4 w-4" />}
+                                {user.is_active ? "Desativar" : "Ativar"} Usuário
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => { setSelectedUser(user); setDeleteDialogOpen(true); }} className="text-rose-600">
+                                <Trash2 className="mr-2 h-4 w-4" /> Excluir Conta
+                              </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Detalhes do Usuário */}
       <Dialog open={!!detailUser} onOpenChange={() => setDetailUser(null)}>
         <DialogContent className="max-w-lg p-0 overflow-hidden border-none shadow-2xl">
           {detailUser && (
             <div className="flex flex-col">
-              {/* Header com Cover Simulado */}
               <div className="h-24 bg-gradient-to-r from-primary to-accent relative">
                 <div className="absolute -bottom-10 left-6">
                   <div className="relative group">
@@ -356,3 +362,22 @@ export default function TIUsuariosPage() {
     </DashboardLayout>
   );
 }
+  
+function StatCard({ title, value, icon: Icon, color, bg, isText }: any) {  
+  return (  
+    <Card className=\" card-institutional border-none shadow-sm group hover:shadow-md transition-all "duration-300\>  
+      <CardContent className=\p-4\>  
+        <div className=\flex" items-center justify-between "mb-2\>  
+          <div className={cn(\p-2" rounded-xl "transition-colors\, bg)}>  
+            <Icon className={cn(\h-4" "w-4\, color)} />  
+          </div>  
+          <ArrowRight className=\h-4" w-4 text-muted-foreground/10 opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 "transition-all\ />  
+        </div>  
+        <div className=\space-y-0.5\>  
+          <p className=\text-[10px]" font-bold uppercase tracking-wider "text-muted-foreground\>{title}</p>  
+          <h3 className={cn(\font-bold" text-foreground "truncate\, isText ? \text-xs\ : \text-xl\)}>{value}</h3>  
+        </div>  
+      </CardContent>  
+    </Card>  
+  );  
+} 

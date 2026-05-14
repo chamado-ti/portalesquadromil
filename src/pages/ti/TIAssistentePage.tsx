@@ -5,12 +5,12 @@ import { useAIConversations } from '@/hooks/useAIConversations';
 import { useAIAssistant, ChatMessage, FileAttachment } from '@/hooks/useAIAssistant';
 
 export default function TIAssistentePage() {
-  const { messages, isLoading, sendMessage, clearMessages, setMessages } = useAIAssistant();
+  const { messages, isLoading, sendMessage, clearMessages, setMessages } = useAIAssistant('ti-admin');
   const { conversations, createConversation, updateConversation, deleteConversation, refetch } = useAIConversations();
   const [inputValue, setInputValue] = useState('');
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
 
-  const loadConversation = useCallback((conv: typeof conversations[0]) => {
+  const loadConversation = useCallback((conv: any) => {
     setActiveConversationId(conv.id);
     const loaded: ChatMessage[] = (conv.messages as any[]).map((m: any) => ({
       id: m.id || crypto.randomUUID(), role: m.role, content: m.content,
@@ -31,7 +31,7 @@ export default function TIAssistentePage() {
 
   useEffect(() => {
     if (messages.length > 0 && activeConversationId && !isLoading) {
-      const timer = setTimeout(saveConversation, 1000);
+      const timer = setTimeout(saveConversation, 2000);
       return () => clearTimeout(timer);
     }
   }, [messages, activeConversationId, isLoading, saveConversation]);
@@ -43,18 +43,12 @@ export default function TIAssistentePage() {
   };
 
   const handleDeleteConv = async (id: string) => {
-    try {
-      // Clear UI immediately if deleting active conversation
-      if (activeConversationId === id) {
-        setActiveConversationId(null);
-        clearMessages();
-      }
-      await deleteConversation(id);
-      // Force refetch to ensure clean state
-      await refetch();
-    } catch (err) {
-      console.error('Delete error:', err);
+    if (activeConversationId === id) {
+      setActiveConversationId(null);
+      clearMessages();
     }
+    await deleteConversation(id);
+    await refetch();
   };
 
   const handleSend = async (attachments?: FileAttachment[]) => {
@@ -78,7 +72,6 @@ export default function TIAssistentePage() {
         onSend={handleSend}
         onNewChat={handleNewChat}
         onClear={async () => {
-          // Se há uma conversa ativa, persiste mensagens vazias para apagar do DB
           if (activeConversationId) {
             try { await updateConversation({ id: activeConversationId, messages: [] }); } catch {}
           }
@@ -90,9 +83,9 @@ export default function TIAssistentePage() {
         activeConversationId={activeConversationId}
         onSelectConversation={loadConversation}
         onDeleteConversation={handleDeleteConv}
-        title="Assistente IA — Painel TI"
-        subtitle="Acesse informações sobre chamados, usuários, agendamentos e mais. Envie imagens, PDFs e áudios."
-        quickPrompts={['Quantos chamados abertos?', 'Resumo dos tickets urgentes', 'Usuários inativos']}
+        title="Agente de Operações TI"
+        subtitle="Analise logs, gere relatórios e gerencie a infraestrutura com auxílio de IA Generativa."
+        quickPrompts={['Status do servidor', 'Resumo de chamados críticos', 'Auditoria de acessos']}
       />
     </DashboardLayout>
   );

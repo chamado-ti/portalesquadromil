@@ -22,6 +22,14 @@ import {
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { useAuditLogs, type AuditLog } from "@/hooks/useAuditLogs";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
   Search,
   FileText,
   User,
@@ -31,6 +39,9 @@ import {
   RefreshCw,
   Shield,
   Activity,
+  Eye,
+  ShieldAlert,
+  ArrowRight
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -102,52 +113,53 @@ export default function TILogsPage() {
   }
 
   return (
-    <DashboardLayout>
-      <div className="animate-fade-in space-y-6">
-        {/* Stats */}
-        <div className="grid gap-4 md:grid-cols-3">
-          <Card className="card-institutional">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Total de Registros</p>
-                  <p className="text-2xl font-bold">{logs.length}</p>
-                </div>
-                <Activity className="h-8 w-8 text-primary/30" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="card-institutional">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Hoje</p>
-                  <p className="text-2xl font-bold text-info">
-                    {
-                      logs.filter((l) => {
-                        const logDate = new Date(l.created_at).toDateString();
-                        const today = new Date().toDateString();
-                        return logDate === today;
-                      }).length
-                    }
-                  </p>
-                </div>
-                <Calendar className="h-8 w-8 text-info/30" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="card-institutional">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Tipos de Ação</p>
-                  <p className="text-2xl font-bold text-warning">{actions.length}</p>
-                </div>
-                <Shield className="h-8 w-8 text-warning/30" />
-              </div>
-            </CardContent>
-          </Card>
+    <DashboardLayout title="Auditoria do Sistema">
+      <div className="space-y-8 animate-fade-in">
+        {/* KPI Row */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <StatCard title="Total de Registros" value={logs.length} icon={FileText} color="text-blue-600" bg="bg-blue-50" />
+          <StatCard 
+            title="Hoje" 
+            value={logs.filter(l => new Date(l.created_at).toDateString() === new Date().toDateString()).length} 
+            icon={Calendar} 
+            color="text-indigo-600" 
+            bg="bg-indigo-50" 
+          />
+          <StatCard title="Ações Críticas" value={logs.filter(l => l.action.includes('delete') || l.action.includes('reset')).length} icon={ShieldAlert} color="text-rose-600" bg="bg-rose-50" />
+          <StatCard title="Módulos Ativos" value={entityTypes.length} icon={Activity} color="text-amber-600" bg="bg-amber-50" />
         </div>
+
+        <Card className="card-institutional border-none shadow-sm overflow-hidden">
+          <CardHeader className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 px-6">
+            <div className="space-y-1">
+              <CardTitle className="text-xl font-bold">Histórico de Operações</CardTitle>
+              <p className="text-xs text-muted-foreground">Rastreabilidade total de todas as ações realizadas no portal esquadromil.</p>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar ação, usuário ou detalhe..."
+                  className="pl-9 w-[280px] h-10 bg-muted/30 border-none rounded-xl text-sm"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              <Select value={actionFilter} onValueChange={setActionFilter}>
+                <SelectTrigger className="w-[160px] h-10 bg-muted/30 border-none rounded-xl text-sm">
+                  <SelectValue placeholder="Tipo de Ação" />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl">
+                  <SelectItem value="all">Todas Ações</SelectItem>
+                  {actions.map((action) => (
+                    <SelectItem key={action} value={action}>
+                      {ACTION_CONFIG[action]?.label || action}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </CardHeader>
 
         {/* Filters and Table */}
         <Card className="card-institutional">
@@ -215,68 +227,68 @@ export default function TILogsPage() {
                 </p>
               </div>
             ) : (
-              <div className="overflow-x-auto rounded-lg border">
+              <div className="overflow-x-auto">
                 <Table>
-                  <TableHeader>
+                  <TableHeader className="bg-muted/30">
                     <TableRow>
-                      <TableHead>Data/Hora</TableHead>
-                      <TableHead>Usuário</TableHead>
-                      <TableHead>Ação</TableHead>
-                      <TableHead>Entidade</TableHead>
-                      <TableHead>Detalhes</TableHead>
+                      <TableHead className="font-bold text-[10px] uppercase tracking-widest text-muted-foreground pl-6">Data/Hora</TableHead>
+                      <TableHead className="font-bold text-[10px] uppercase tracking-widest text-muted-foreground">Usuário</TableHead>
+                      <TableHead className="font-bold text-[10px] uppercase tracking-widest text-muted-foreground">Ação</TableHead>
+                      <TableHead className="font-bold text-[10px] uppercase tracking-widest text-muted-foreground">Módulo</TableHead>
+                      <TableHead className="font-bold text-[10px] uppercase tracking-widest text-muted-foreground pr-6">Detalhes do Evento</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredLogs.map((log) => (
-                      <TableRow key={log.id}>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Clock className="h-4 w-4 text-muted-foreground" />
-                            <div>
-                              <p className="text-sm">
-                                {format(new Date(log.created_at), "dd/MM/yyyy", {
-                                  locale: ptBR,
-                                })}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {format(new Date(log.created_at), "HH:mm:ss", {
-                                  locale: ptBR,
-                                })}
-                              </p>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <User className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-sm">
-                              {log.user?.full_name || "Sistema"}
+                      <TableRow key={log.id} className="group hover:bg-muted/10 transition-colors border-b">
+                        <TableCell className="pl-6 py-4">
+                          <div className="flex flex-col">
+                            <span className="font-bold text-sm text-foreground">{format(new Date(log.created_at), "dd/MM/yyyy")}</span>
+                            <span className="text-xs text-muted-foreground flex items-center gap-1">
+                              <Clock className="h-3 w-3" /> {format(new Date(log.created_at), "HH:mm:ss")}
                             </span>
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge
-                            variant="outline"
-                            className={cn(
-                              "text-xs",
-                              ACTION_CONFIG[log.action]?.color || "bg-muted"
-                            )}
-                          >
+                          <div className="flex items-center gap-2">
+                            <div className="h-7 w-7 rounded-lg bg-primary/5 flex items-center justify-center text-primary font-bold text-[10px]">
+                              {log.user?.full_name?.charAt(0) || "S"}
+                            </div>
+                            <span className="text-sm font-medium text-foreground">{log.user?.full_name || "Sistema"}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={cn("rounded-lg font-bold text-[9px] uppercase border px-2 py-0.5", ACTION_CONFIG[log.action]?.color || "bg-muted text-muted-foreground")}>
                             {ACTION_CONFIG[log.action]?.label || log.action}
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <span className="text-sm capitalize">
-                            {log.entity_type || "—"}
+                          <span className="text-[10px] font-bold uppercase text-muted-foreground tracking-tighter bg-muted/50 px-1.5 py-0.5 rounded">
+                            {log.entity_type || "Geral"}
                           </span>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="pr-6">
                           {log.details ? (
-                            <pre className="max-w-xs overflow-hidden text-ellipsis whitespace-nowrap text-xs text-muted-foreground">
-                              {JSON.stringify(log.details, null, 2).substring(0, 50)}...
-                            </pre>
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <Button variant="ghost" size="sm" className="h-7 px-2 text-[10px] font-bold uppercase tracking-tighter hover:bg-primary/5 hover:text-primary">
+                                  <Eye className="mr-1.5 h-3 w-3" /> Ver JSON
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent className="max-w-2xl bg-[#1e1e1e] border-none text-white p-0 overflow-hidden rounded-2xl">
+                                <div className="p-4 border-b border-white/5 bg-white/5 flex items-center justify-between">
+                                  <h3 className="text-sm font-bold uppercase tracking-wider text-primary-foreground/70">Payload do Evento</h3>
+                                  <Badge variant="outline" className="text-[10px] border-white/20 text-white/50">{log.action}</Badge>
+                                </div>
+                                <ScrollArea className="h-[400px] w-full p-6">
+                                  <pre className="text-xs font-mono text-emerald-400 leading-relaxed">
+                                    {JSON.stringify(log.details, null, 2)}
+                                  </pre>
+                                </ScrollArea>
+                              </DialogContent>
+                            </Dialog>
                           ) : (
-                            <span className="text-sm text-muted-foreground">—</span>
+                            <span className="text-xs text-muted-foreground/50">—</span>
                           )}
                         </TableCell>
                       </TableRow>
@@ -300,3 +312,21 @@ export default function TILogsPage() {
     </DashboardLayout>
   );
 }
+  
+function StatCard({ title, value, icon: Icon, color, bg }: any) {  
+  return (  
+    <Card className=\" card-institutional border-none shadow-sm group hover:shadow-md transition-all "duration-300\>  
+      <CardContent className=\p-4\>  
+        <div className=\flex" items-center justify-between "mb-2\>  
+          <div className={cn(\p-2" rounded-xl "transition-colors\, bg)}>  
+            <Icon className={cn(\h-4" "w-4\, color)} />  
+          </div>  
+          <ArrowRight className=\h-4" w-4 text-muted-foreground/10 opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 "transition-all\ />  
+        </div>  
+        <div className=\space-y-0.5\>  
+          <p className=\text-[10px]" font-bold uppercase tracking-wider "text-muted-foreground\>{title}</p>  
+          <h3 className=\text-xl" font-bold text-foreground "truncate\>{value}</h3>  
+        </div>  
+      </CardContent>  
+    </Card>  
+  );  

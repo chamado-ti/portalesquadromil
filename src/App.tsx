@@ -25,11 +25,11 @@ const TIRelatoriosPage = React.lazy(() => import("./pages/ti/TIRelatoriosPage"))
 const TIAssistentePage = React.lazy(() => import("./pages/ti/TIAssistentePage"));
 const TIAgentesPage = React.lazy(() => import("./pages/ti/TIAgentesPage"));
 const TIModulosPage = React.lazy(() => import("./pages/ti/TIModulosPage"));
-const TITarefasPage = React.lazy(() => import("./pages/ti/TITarefasPage"));
-const TIKanbanPage = React.lazy(() => import("./pages/ti/TIKanbanPage"));
+const TIWorkspacePage = React.lazy(() => import("./pages/ti/TIWorkspacePage"));
 const TIArquivosPage = React.lazy(() => import("./pages/ti/TIArquivosPage"));
 const TIProcessosPage = React.lazy(() => import("./pages/ti/TIProcessosPage"));
 const TIGruposPage = React.lazy(() => import("./pages/ti/TIGruposPage"));
+const TIReservaPage = React.lazy(() => import("./pages/ti/TIReservaPage"));
 
 const GuaritaDashboard = React.lazy(() => import("./pages/guarita/GuaritaDashboard"));
 const GuaritaQRCodePage = React.lazy(() => import("./pages/guarita/GuaritaQRCodePage"));
@@ -45,6 +45,7 @@ const ColaboradorAgendamentosPage = React.lazy(() => import("./pages/colaborador
 const ColaboradorAgentesPage = React.lazy(() => import("./pages/colaborador/ColaboradorAgentesPage"));
 const ColaboradorGruposPage = React.lazy(() => import("./pages/colaborador/ColaboradorGruposPage"));
 const ColaboradorSolicitarPage = React.lazy(() => import("./pages/colaborador/ColaboradorSolicitarPage"));
+const ColaboradorReservaPage = React.lazy(() => import("./pages/colaborador/ColaboradorReservaPage"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -84,11 +85,13 @@ const App = () => (
                 <Route path="/ti/assistente" element={<ProtectedRoute allowedRoles={['ti']}><TIAssistentePage /></ProtectedRoute>} />
                 <Route path="/ti/agentes" element={<ProtectedRoute allowedRoles={['ti']}><TIAgentesPage /></ProtectedRoute>} />
                 <Route path="/ti/modulos" element={<ProtectedRoute allowedRoles={['ti']}><TIModulosPage /></ProtectedRoute>} />
-                <Route path="/ti/tarefas" element={<ProtectedRoute allowedRoles={['ti']}><TITarefasPage /></ProtectedRoute>} />
-                <Route path="/ti/kanban" element={<ProtectedRoute allowedRoles={['ti']}><TIKanbanPage /></ProtectedRoute>} />
+                <Route path="/ti/workspace" element={<ProtectedRoute allowedRoles={['ti']}><TIWorkspacePage /></ProtectedRoute>} />
+                <Route path="/ti/tarefas" element={<ProtectedRoute allowedRoles={['ti']}><TIWorkspacePage /></ProtectedRoute>} />
+                <Route path="/ti/kanban" element={<ProtectedRoute allowedRoles={['ti']}><TIWorkspacePage /></ProtectedRoute>} />
                 <Route path="/ti/arquivos" element={<ProtectedRoute allowedRoles={['ti']}><TIArquivosPage /></ProtectedRoute>} />
                 <Route path="/ti/processos" element={<ProtectedRoute allowedRoles={['ti']}><TIProcessosPage /></ProtectedRoute>} />
                 <Route path="/ti/grupos" element={<ProtectedRoute allowedRoles={['ti']}><TIGruposPage /></ProtectedRoute>} />
+                <Route path="/ti/reserva-auditorio" element={<ProtectedRoute allowedRoles={['ti']}><TIReservaPage /></ProtectedRoute>} />
                 <Route path="/ti/solicitacoes" element={<ProtectedRoute allowedRoles={['ti']}><GuaritaSolicitacoesPage /></ProtectedRoute>} />
 
                 <Route path="/guarita" element={<ProtectedRoute allowedRoles={['guarita']}><GuaritaDashboard /></ProtectedRoute>} />
@@ -104,6 +107,7 @@ const App = () => (
                 <Route path="/colaborador/agendamentos" element={<ProtectedRoute allowedRoles={['colaborador']}><ColaboradorAgendamentosPage /></ProtectedRoute>} />
                 <Route path="/colaborador/agentes" element={<ProtectedRoute allowedRoles={['colaborador']}><ColaboradorAgentesPage /></ProtectedRoute>} />
                 <Route path="/colaborador/grupos" element={<ProtectedRoute allowedRoles={['colaborador']}><ColaboradorGruposPage /></ProtectedRoute>} />
+                <Route path="/colaborador/reserva-auditorio" element={<ProtectedRoute allowedRoles={['colaborador']}><ColaboradorReservaPage /></ProtectedRoute>} />
                 <Route path="/colaborador/solicitar" element={<ProtectedRoute allowedRoles={['colaborador']}><ColaboradorSolicitarPage /></ProtectedRoute>} />
 
                 <Route path="*" element={<NotFound />} />

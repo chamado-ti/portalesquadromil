@@ -24,7 +24,7 @@ export interface ChatMessage {
 
 const STREAM_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-assistant`;
 
-export function useAIAssistant() {
+export function useAIAssistant(agentId?: string) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const queryClient = useQueryClient();
@@ -50,7 +50,7 @@ export function useAIAssistant() {
       const resp = await fetch(STREAM_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}`, 'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
-        body: JSON.stringify({ messages: [{ role: 'user', content: 'Criar chamado automaticamente' }], autoCreateTicket: suggestion }),
+        body: JSON.stringify({ messages: [{ role: 'user', content: 'Criar chamado automaticamente' }], autoCreateTicket: suggestion, agentId }),
       });
       if (resp.ok) {
         const data = await resp.json();
@@ -59,7 +59,7 @@ export function useAIAssistant() {
         queryClient.invalidateQueries({ queryKey: ['tickets'] });
       }
     } catch (err) { console.error('Error auto-creating ticket:', err); }
-  }, [queryClient]);
+  }, [queryClient, agentId]);
 
   const sendMessage = useCallback(async (userMessage: string, attachments?: FileAttachment[], tiMode?: boolean) => {
     const userChatMessage: ChatMessage = { id: crypto.randomUUID(), role: 'user', content: userMessage, timestamp: new Date(), attachments };
@@ -78,7 +78,6 @@ export function useAIAssistant() {
             if (att.type === 'image') {
               contentParts.push({ type: 'image_url', image_url: { url: `data:${att.mimeType};base64,${att.base64}` } });
             } else {
-              // For PDFs, audio, etc - send as text description + base64
               contentParts.push({ type: 'text', text: `[Arquivo anexado: ${att.name} (${att.mimeType})]\nConteúdo em base64: ${att.base64.slice(0, 5000)}...` });
             }
           }
@@ -90,7 +89,7 @@ export function useAIAssistant() {
       const resp = await fetch(STREAM_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}`, 'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
-        body: JSON.stringify({ messages: messagesForAPI, tiMode }),
+        body: JSON.stringify({ messages: messagesForAPI, tiMode, agentId }),
       });
 
       if (!resp.ok) { const errData = await resp.json().catch(() => ({})); throw new Error(errData.error || 'Erro ao conectar com a IA'); }
@@ -150,7 +149,7 @@ export function useAIAssistant() {
     } finally {
       setIsLoading(false);
     }
-  }, [messages]);
+  }, [messages, agentId]);
 
   const clearMessages = useCallback(() => setMessages([]), []);
 

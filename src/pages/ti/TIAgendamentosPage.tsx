@@ -83,17 +83,12 @@ export default function TIAgendamentosPage() {
   }, [appointments, searchTerm, statusFilter, dateFilter]);
 
   const stats = useMemo(() => {
-    const today = appointments.filter((a) => isToday(parseISO(a.scheduled_date))).length;
-    const pending = appointments.filter((a) => a.status === "pending").length;
-    const completed = appointments.filter((a) => a.status === "completed").length;
-    const late = appointments.filter((a) => 
-      isPast(parseISO(a.scheduled_date)) && 
-      !isToday(parseISO(a.scheduled_date)) && 
-      a.status === "pending"
-    ).length;
-    const rate = appointments.length > 0 ? Math.round((completed / appointments.length) * 100) : 0;
+    const next = appointments.filter((a) => {
+      const aptDate = parseISO(a.scheduled_date);
+      return isAfter(aptDate, new Date()) && !isToday(aptDate);
+    }).length;
 
-    return { total: appointments.length, today, pending, completed, late, rate };
+    return { total: appointments.length, today, pending, completed, late, rate, next };
   }, [appointments]);
 
   if (error) {
@@ -169,42 +164,33 @@ export default function TIAgendamentosPage() {
                   <kpi.icon className={`h-4 w-4 ${kpi.color}`} />
                 </div>
                 <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{kpi.label}</p>
-                <p className="text-xl font-bold mt-0.5">{isLoading ? '...' : kpi.value}</p>
-              </CardContent>
-            </Card>
-          ))}
+    <DashboardLayout title="Controle de Agendamentos">
+      <div className="space-y-8 animate-fade-in">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          <StatCard title="Para Hoje" value={stats.today} icon={Calendar} color="text-blue-600" bg="bg-blue-50" />
+          <StatCard title="Atrasados" value={stats.late} icon={AlertTriangle} color="text-rose-600" bg="bg-rose-50" />
+          <StatCard title="Pendentes" value={stats.pending} icon={Timer} color="text-amber-600" bg="bg-amber-50" />
+          <StatCard title="Concluídos" value={stats.completed} icon={CheckCircle2} color="text-emerald-600" bg="bg-emerald-50" />
+          <StatCard title="Próximos" value={stats.next} icon={Clock} color="text-indigo-600" bg="bg-indigo-50" />
+          <StatCard title="Taxa Conclusão" value={`${stats.rate}%`} icon={Activity} color="text-purple-600" bg="bg-purple-50" />
         </div>
 
-        {/* Filtros e Tabela */}
-        <Card className="card-institutional border-none shadow-sm">
-          <CardHeader className="px-6 pb-4">
-            <div className="flex flex-col gap-4 md:flex-row md:items-center">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Card className="card-institutional border-none shadow-sm overflow-hidden">
+          <CardHeader className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 px-6">
+            <div className="space-y-1">
+              <CardTitle className="text-xl font-bold">Registro de Visitantes</CardTitle>
+              <p className="text-xs text-muted-foreground">Monitore e gerencie todos os acessos e visitas agendadas para a empresa.</p>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Buscar por visitante, motivo ou colaborador..."
+                  placeholder="Buscar visitante ou responsável..."
+                  className="pl-9 w-[280px] h-10 bg-muted/30 border-none rounded-xl text-sm"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9 h-10"
                 />
               </div>
-              <div className="flex gap-2">
-                <Select value={dateFilter} onValueChange={setDateFilter}>
-                  <SelectTrigger className="w-full sm:w-40 h-10"><SelectValue placeholder="Data" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todas as datas</SelectItem>
-                    <SelectItem value="today">Hoje</SelectItem>
-                    <SelectItem value="tomorrow">Amanhã</SelectItem>
-                    <SelectItem value="past">Passados</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-full sm:w-40 h-10"><SelectValue placeholder="Status" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos os status</SelectItem>
-                    <SelectItem value="pending">Pendente</SelectItem>
-                    <SelectItem value="confirmed">Confirmado</SelectItem>
-                    <SelectItem value="completed">Concluído</SelectItem>
                     <SelectItem value="cancelled">Cancelado</SelectItem>
                   </SelectContent>
                 </Select>
@@ -309,3 +295,22 @@ export default function TIAgendamentosPage() {
     </DashboardLayout>
   );
 }
+  
+function StatCard({ title, value, icon: Icon, color, bg }: any) {  
+  return (  
+    <Card className=\" card-institutional border-none shadow-sm group hover:shadow-md transition-all "duration-300\>  
+      <CardContent className=\p-4\>  
+        <div className=\flex" items-center justify-between "mb-2\>  
+          <div className={cn(\p-2" rounded-xl "transition-colors\, bg)}>  
+            <Icon className={cn(\h-4" "w-4\, color)} />  
+          </div>  
+          <ArrowRight className=\h-4" w-4 text-muted-foreground/10 opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 "transition-all\ />  
+        </div>  
+        <div className=\space-y-0.5\>  
+          <p className=\text-[10px]" font-bold uppercase tracking-wider "text-muted-foreground\>{title}</p>  
+          <h3 className=\text-xl" font-bold text-foreground "truncate\>{value}</h3>  
+        </div>  
+      </CardContent>  
+    </Card>  
+  );  
+}  

@@ -10,7 +10,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { Link } from 'react-router-dom';
 import {
   Users, Ticket, Calendar, TrendingUp, ArrowRight, AlertTriangle, 
-  CheckCircle2, Clock, BarChart3, Activity, ShieldAlert, Timer
+  CheckCircle2, Clock, BarChart3, Activity, ShieldAlert, Timer,
+  UserCheck, Zap, Target, History, Settings, ExternalLink
 } from 'lucide-react';
 import { format, isSameDay, parseISO, differenceInMinutes, subDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -110,32 +111,35 @@ export default function TIDashboard() {
   }, [tickets, urgencies]);
 
   const kpis = [
-    { label: 'Usuários Ativos', value: stats?.activeUsers || 0, icon: Users, color: 'text-blue-600', bg: 'bg-blue-50' },
-    { label: 'Chamados Abertos', value: stats?.openTickets || 0, icon: Ticket, color: 'text-amber-600', bg: 'bg-amber-50' },
-    { label: 'Chamados Críticos', value: stats?.criticalTickets || 0, icon: ShieldAlert, color: 'text-rose-600', bg: 'bg-rose-50' },
+    { label: 'Ativos', value: stats?.activeUsers || 0, icon: UserCheck, color: 'text-blue-600', bg: 'bg-blue-50' },
+    { label: 'Abertos', value: stats?.openTickets || 0, icon: Ticket, color: 'text-amber-600', bg: 'bg-amber-50' },
+    { label: 'Críticos', value: stats?.criticalTickets || 0, icon: ShieldAlert, color: 'text-rose-600', bg: 'bg-rose-50' },
     { label: 'Finalizados', value: stats?.finishedTickets || 0, icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-    { label: 'Agendamentos Hoje', value: stats?.todayAppointments || 0, icon: Calendar, color: 'text-sky-600', bg: 'bg-sky-50' },
-    { label: 'Próximos SLA', value: stats?.nearSLA || 0, icon: Timer, color: 'text-orange-600', bg: 'bg-orange-50' },
-    { label: 'Fora do SLA', value: stats?.outOfSLA || 0, icon: AlertTriangle, color: 'text-red-600', bg: 'bg-red-50' },
-    { label: 'Resolvidos Hoje', value: stats?.resolvedToday || 0, icon: Activity, color: 'text-indigo-600', bg: 'bg-indigo-50' },
-    { label: 'Taxa Resolução', value: `${stats?.resolutionRate || 0}%`, icon: TrendingUp, color: 'text-teal-600', bg: 'bg-teal-50' },
-    { label: 'Total Histórico', value: stats?.totalTickets || 0, icon: BarChart3, color: 'text-slate-600', bg: 'bg-slate-50' },
+    { label: 'Resolvidos Hoje', value: stats?.resolvedToday || 0, icon: Zap, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+    { label: 'Agendamentos', value: stats?.todayAppointments || 0, icon: Calendar, color: 'text-cyan-600', bg: 'bg-cyan-50' },
+    { label: 'Próximos SLA', value: stats?.nearSLA || 0, icon: Clock, color: 'text-orange-600', bg: 'bg-orange-50' },
+    { label: 'Fora do SLA', value: stats?.outOfSLA || 0, icon: Timer, color: 'text-red-600', bg: 'bg-red-50' },
+    { label: 'Taxa Resolução', value: `${stats?.resolutionRate || 0}%`, icon: Target, color: 'text-purple-600', bg: 'bg-purple-50' },
+    { label: 'Total Geral', value: stats?.totalTickets || 0, icon: History, color: 'text-slate-600', bg: 'bg-slate-50' },
   ];
 
   return (
-    <DashboardLayout>
+    <DashboardLayout title="Dashboard Executivo">
       <div className="animate-fade-in space-y-8 pb-10">
         {/* Header Profissional */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-3xl shadow-sm border border-primary/5">
           <div>
-            <h2 className="text-3xl font-bold tracking-tight text-foreground">
-              Olá, {profile?.full_name?.split(' ')[0] || 'Administrador'}!
+            <h2 className="text-2xl font-bold tracking-tight text-foreground">
+              Olá, {profile?.full_name?.split(' ')[0] || 'Administrador'} 👋
             </h2>
-            <p className="text-muted-foreground mt-1">Bem-vindo ao centro de comando operacional do Portal Esquadromil.</p>
+            <p className="text-muted-foreground text-sm mt-1">Bem-vindo ao centro de comando operacional do Portal Esquadromil.</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            <Button variant="outline" className="rounded-xl border-primary/10 hover:bg-primary/5" asChild>
+              <Link to="/ti/relatorios"><BarChart3 className="mr-2 h-4 w-4" /> Relatórios</Link>
+            </Button>
             <Link to="/ti/chamados">
-              <Button className="h-10 px-6 font-semibold shadow-institutional">Novo Chamado</Button>
+              <Button className="h-10 px-6 font-semibold shadow-lg shadow-primary/20 rounded-xl">Novo Chamado</Button>
             </Link>
           </div>
         </div>
@@ -143,16 +147,17 @@ export default function TIDashboard() {
         {/* Grid de KPIs - 10 Cards */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
           {kpis.map((kpi, idx) => (
-            <Card key={idx} className="card-institutional border-none shadow-sm group">
+            <Card key={idx} className="card-institutional border-none shadow-sm group hover:shadow-md transition-all duration-300">
               <CardContent className="p-4">
-                <div className="flex items-start justify-between">
-                  <div className={`p-2 rounded-lg ${kpi.bg} group-hover:scale-110 transition-transform`}>
-                    <kpi.icon className={`h-4 w-4 ${kpi.color}`} />
+                <div className="flex items-center justify-between mb-3">
+                  <div className={`p-2.5 rounded-2xl ${kpi.bg} transition-all group-hover:scale-110`}>
+                    <kpi.icon className={`h-5 w-5 ${kpi.color}`} />
                   </div>
+                  <ArrowRight className="h-4 w-4 text-muted-foreground/20 opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all" />
                 </div>
-                <div className="mt-3">
+                <div className="space-y-0.5">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{kpi.label}</p>
-                  <p className="text-xl font-bold text-foreground mt-0.5">{isLoadingTickets ? '...' : kpi.value}</p>
+                  <p className="text-2xl font-bold text-foreground tabular-nums">{isLoadingTickets ? '...' : kpi.value}</p>
                 </div>
               </CardContent>
             </Card>
