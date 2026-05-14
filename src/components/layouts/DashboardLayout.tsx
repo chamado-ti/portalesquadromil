@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Users, Ticket, Calendar, Bell, LogOut, Menu, ChevronLeft,
   FileText, Bot, QrCode, Settings, History, BarChart3, Trash2,
   Blocks, ListTodo, Cpu, LayoutGrid, FolderOpen, GitBranch, Plus, MessageSquare,
-  Sparkles, ShieldCheck, Zap, Layers, Activity
+  Sparkles, ShieldCheck, Zap, Layers, Activity, Building2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
