@@ -361,12 +361,12 @@ export default function TIChamadosPage() {
         {isLoading ? (
           <div className="flex items-center justify-center py-12"><LoadingSpinner size="lg" /></div>
         ) : (
-          <div className="grid gap-4 lg:grid-cols-4 xl:grid-cols-4">
+          <div className="flex gap-6 overflow-x-auto pb-6 scrollbar-thin scrollbar-thumb-muted-foreground/20 scrollbar-track-transparent">
             {statuses
               .filter(s => s.name.toLowerCase() !== 'aguardando')
               .map(status => (
-              <div key={status.id} className="flex flex-col min-w-[280px]" onDragOver={handleDragOver} onDrop={e => handleDrop(e, status.id)}>
-                <div className="mb-3 flex items-center justify-between rounded-xl border-b-4 bg-card p-4 shadow-sm" style={{ borderBottomColor: status.color }}>
+              <div key={status.id} className="flex flex-col min-w-[320px] max-w-[320px] shrink-0" onDragOver={handleDragOver} onDrop={e => handleDrop(e, status.id)}>
+                <div className="mb-4 flex items-center justify-between rounded-2xl border-b-4 bg-white p-4 shadow-sm" style={{ borderBottomColor: status.color }}>
                   <div className="flex items-center gap-2">
                     <h3 className="text-sm font-bold uppercase tracking-wider">{status.name}</h3>
                     <Badge variant="secondary" className="text-[10px] font-bold h-5 min-w-5 rounded-full flex items-center justify-center p-0">{ticketsByStatus[status.id]?.length || 0}</Badge>

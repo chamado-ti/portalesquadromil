@@ -11,7 +11,8 @@ import {
   Plus, Trash2, Users, MessageSquare, Tag, UserPlus, UserMinus,
   Loader2, MoreVertical, Search, ChevronRight, Hash, ShieldCheck
 } from 'lucide-react';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { useGroups, useGroupTags, useTagMembers, useGroupUnreadCounts, type Group, type GroupTag } from '@/hooks/useGroups';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
