@@ -8,6 +8,8 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   Plus, Trash2, Loader2, FileText, FolderOpen, Upload, File, FileSpreadsheet, 
   FileType, Eye, Download, FolderPlus, Grid, List, Search, MoreVertical,
@@ -55,7 +57,7 @@ export default function TIArquivosPage() {
   const [newFolderName, setNewFolderName] = useState('');
   const [sidebarFilter, setSidebarFilter] = useState<'all' | 'recent' | 'favorites'>('all');
 
-  const { data: files = [], isLoading } = useQuery({
+  const { data: files = [], isLoading, isError } = useQuery({
     queryKey: ['ti-files'],
     queryFn: async () => {
       const { data, error } = await supabase.from('ti_files').select('*').order('created_at', { ascending: false });
@@ -65,9 +67,10 @@ export default function TIArquivosPage() {
   });
 
   const folders = useMemo(() => {
-    const set = new Set(files.map(f => f.folder));
-    if (set.size === 0) set.add('Geral');
-    return Array.from(set);
+    const set = new Set(files.map(f => f.folder).filter(Boolean));
+    const arr = Array.from(set);
+    if (!arr.includes('Geral')) arr.unshift('Geral');
+    return arr;
   }, [files]);
 
   const filteredFiles = useMemo(() => {

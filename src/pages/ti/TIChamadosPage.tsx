@@ -378,71 +378,107 @@ export default function TIChamadosPage() {
                         <TicketIcon className="mb-2 h-6 w-6 text-muted-foreground/30" />
                         <p className="text-xs text-muted-foreground">Vazio</p>
                       </div>
-                    ) : ticketsByStatus[status.id]?.map(ticket => {
-                      const urgency = urgencies.find(u => u.id === ticket.urgency_id);
-                      return (
-                        <Card 
-                          key={ticket.id} 
-                          className="card-institutional cursor-pointer border-none shadow-sm relative overflow-hidden group" 
-                          draggable 
-                          onDragStart={e => handleDragStart(e, ticket.id)} 
-                          onClick={() => setSelectedTicketId(ticket.id)}
-                        >
-                          {/* Priority indicator line */}
-                          <div className="absolute left-0 top-0 bottom-0 w-1" style={{ backgroundColor: urgency?.color || '#eee' }} />
-                          
-                          <CardContent className="p-3.5 space-y-3">
-                            <div className="flex items-start justify-between gap-2">
-                              <h4 className="line-clamp-2 text-xs font-bold leading-relaxed group-hover:text-primary transition-colors">
-                                {ticket.title}
-                              </h4>
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100 text-destructive hover:bg-destructive/10 transition-all" 
-                                onClick={e => confirmDelete(ticket.id, e)}
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </Button>
-                            </div>
+                      ) : ticketsByStatus[status.id]?.map(ticket => {
+                        const urgency = urgencies.find(u => u.id === ticket.urgency_id);
+                        const daysOpen = differenceInDays(new Date(), parseISO(ticket.created_at));
+                        const isOverSLA = urgency?.response_time_minutes && 
+                                        (differenceInDays(new Date(), parseISO(ticket.created_at)) * 24 * 60 > urgency.response_time_minutes);
 
-                            <div className="flex flex-wrap items-center gap-2">
-                              <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-medium bg-muted/50 px-2 py-0.5 rounded-full">
-                                <User className="h-3 w-3" />
-                                <span className="max-w-[80px] truncate">{ticket.creator?.full_name?.split(" ")[0] || "—"}</span>
+                        return (
+                          <Card 
+                            key={ticket.id} 
+                            className="card-institutional cursor-pointer border-none shadow-sm relative overflow-hidden group hover:scale-[1.02] transition-all" 
+                            draggable 
+                            onDragStart={e => handleDragStart(e, ticket.id)} 
+                            onClick={() => setSelectedTicketId(ticket.id)}
+                          >
+                            {/* Priority indicator line */}
+                            <div className="absolute left-0 top-0 bottom-0 w-1.5" style={{ backgroundColor: urgency?.color || '#eee' }} />
+                            
+                            <CardContent className="p-4 space-y-3">
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="space-y-1">
+                                  <h4 className="line-clamp-2 text-[13px] font-bold leading-snug group-hover:text-primary transition-colors">
+                                    {ticket.title}
+                                  </h4>
+                                  <div className="flex items-center gap-2">
+                                    <Badge variant="secondary" className="text-[9px] font-bold h-4 px-1 rounded uppercase">
+                                      #{ticket.id.substring(0, 4)}
+                                    </Badge>
+                                    {isOverSLA && (
+                                      <div className="flex items-center gap-1 text-[9px] font-bold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-100 animate-pulse">
+                                        <Timer className="h-2.5 w-2.5" /> FORA DO SLA
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="h-7 w-7 rounded-full opacity-0 group-hover:opacity-100 text-muted-foreground hover:bg-muted transition-all" 
+                                    onClick={e => { e.stopPropagation(); setSelectedTicketId(ticket.id); }}
+                                  >
+                                    <Eye className="h-4 w-4" />
+                                  </Button>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="h-7 w-7 rounded-full opacity-0 group-hover:opacity-100 text-destructive hover:bg-destructive/10 transition-all" 
+                                    onClick={e => confirmDelete(ticket.id, e)}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
                               </div>
-                              <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-medium bg-muted/50 px-2 py-0.5 rounded-full">
-                                <Calendar className="h-3 w-3" />
-                                <span>{format(new Date(ticket.created_at), "dd/MM")}</span>
-                              </div>
-                            </div>
 
-                            <div className="flex items-center justify-between pt-1">
-                              <div className="flex items-center gap-2">
-                                {ticket.messages && ticket.messages.length > 0 && (
-                                  <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-bold">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/5 border border-primary/10 text-[10px] font-bold text-primary shadow-sm">
+                                    {ticket.creator?.full_name?.charAt(0).toUpperCase() || "U"}
+                                  </div>
+                                  <div className="min-w-0">
+                                    <p className="text-[10px] font-bold text-foreground truncate">{ticket.creator?.full_name?.split(" ")[0] || "—"}</p>
+                                    <p className="text-[9px] text-muted-foreground uppercase font-medium truncate">{ticket.creator?.sector || "S/S"}</p>
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <p className="text-[10px] font-bold text-muted-foreground">
+                                    {daysOpen === 0 ? "Hoje" : `${daysOpen}d atrás`}
+                                  </p>
+                                  <div className="flex items-center justify-end gap-1.5 mt-0.5">
+                                    <Calendar className="h-3 w-3 text-muted-foreground/50" />
+                                    <span className="text-[9px] text-muted-foreground font-medium">{format(parseISO(ticket.created_at), "dd/MM")}</span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center justify-between pt-1 border-t border-dashed">
+                                <div className="flex items-center gap-3">
+                                  <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-bold" title="Mensagens">
                                     <MessageSquare className="h-3 w-3" />
-                                    <span>{ticket.messages.length}</span>
+                                    <span>{ticket.messages?.length || 0}</span>
                                   </div>
-                                )}
-                                {ticket.attachments && ticket.attachments.length > 0 && (
-                                  <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-bold">
+                                  <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-bold" title="Anexos">
                                     <Image className="h-3 w-3" />
-                                    <span>{ticket.attachments.length}</span>
+                                    <span>{ticket.attachments?.length || 0}</span>
                                   </div>
+                                </div>
+                                
+                                {urgency && (
+                                  <Badge 
+                                    variant="outline" 
+                                    className="text-[9px] font-bold uppercase tracking-tighter h-5 px-2 rounded-full" 
+                                    style={{ borderColor: urgency.color, color: urgency.color, backgroundColor: `${urgency.color}10` }}
+                                  >
+                                    {urgency.name}
+                                  </Badge>
                                 )}
                               </div>
-                              
-                              {urgency && (
-                                <Badge variant="outline" className="text-[9px] font-bold uppercase tracking-tighter h-5 px-1.5" style={{ borderColor: urgency.color, color: urgency.color, backgroundColor: `${urgency.color}10` }}>
-                                  {urgency.name}
-                                </Badge>
-                              )}
-                            </div>
-                          </CardContent>
-                        </Card>
-                      );
-                    })}
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
                   </div>
                 </ScrollArea>
               </div>
