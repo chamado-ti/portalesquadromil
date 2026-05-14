@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { DashboardLayout } from "@/components/layouts/DashboardLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -35,16 +35,20 @@ import {
   Eye,
   Download,
   Trash2,
+  CheckCircle2,
+  Timer,
+  AlertTriangle,
+  History
 } from "lucide-react";
-import { format, isToday, isTomorrow, isPast } from "date-fns";
+import { format, isToday, isTomorrow, isPast, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 
-const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
-  pending: { label: "Pendente", className: "bg-warning/15 text-warning" },
-  confirmed: { label: "Confirmado", className: "bg-info/15 text-info" },
-  completed: { label: "Concluído", className: "bg-success/15 text-success" },
-  cancelled: { label: "Cancelado", className: "bg-destructive/15 text-destructive" },
+const STATUS_CONFIG: Record<string, { label: string; className: string; icon: any }> = {
+  pending: { label: "Pendente", className: "bg-amber-50 text-amber-700 border-amber-200", icon: Timer },
+  confirmed: { label: "Confirmado", className: "bg-blue-50 text-blue-700 border-blue-200", icon: CheckCircle2 },
+  completed: { label: "Concluído", className: "bg-emerald-50 text-emerald-700 border-emerald-200", icon: CheckCircle2 },
+  cancelled: { label: "Cancelado", className: "bg-rose-50 text-rose-700 border-rose-200", icon: AlertCircle },
 };
 
 export default function TIAgendamentosPage() {
@@ -55,48 +59,52 @@ export default function TIAgendamentosPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [dateFilter, setDateFilter] = useState<string>("all");
 
-  // Filter appointments
-  const filteredAppointments = appointments.filter((apt) => {
-    const matchesSearch =
-      apt.visitor_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (apt.purpose?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
-      (apt.user?.full_name?.toLowerCase() || "").includes(searchTerm.toLowerCase());
+  const filteredAppointments = useMemo(() => {
+    return appointments.filter((apt) => {
+      const matchesSearch =
+        apt.visitor_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (apt.purpose?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
+        (apt.user?.full_name?.toLowerCase() || "").includes(searchTerm.toLowerCase());
 
-    const matchesStatus = statusFilter === "all" || apt.status === statusFilter;
+      const matchesStatus = statusFilter === "all" || apt.status === statusFilter;
 
-    let matchesDate = true;
-    if (dateFilter === "today") {
-      matchesDate = isToday(new Date(apt.scheduled_date));
-    } else if (dateFilter === "tomorrow") {
-      matchesDate = isTomorrow(new Date(apt.scheduled_date));
-    } else if (dateFilter === "past") {
-      matchesDate = isPast(new Date(apt.scheduled_date)) && !isToday(new Date(apt.scheduled_date));
-    }
+      let matchesDate = true;
+      const aptDate = parseISO(apt.scheduled_date);
+      if (dateFilter === "today") {
+        matchesDate = isToday(aptDate);
+      } else if (dateFilter === "tomorrow") {
+        matchesDate = isTomorrow(aptDate);
+      } else if (dateFilter === "past") {
+        matchesDate = isPast(aptDate) && !isToday(aptDate);
+      }
 
-    return matchesSearch && matchesStatus && matchesDate;
-  });
+      return matchesSearch && matchesStatus && matchesDate;
+    });
+  }, [appointments, searchTerm, statusFilter, dateFilter]);
 
-  // Stats
-  const stats = {
-    total: appointments.length,
-    today: appointments.filter((a) => isToday(new Date(a.scheduled_date))).length,
-    pending: appointments.filter((a) => a.status === "pending").length,
-    completed: appointments.filter((a) => a.status === "completed").length,
-  };
+  const stats = useMemo(() => {
+    const today = appointments.filter((a) => isToday(parseISO(a.scheduled_date))).length;
+    const pending = appointments.filter((a) => a.status === "pending").length;
+    const completed = appointments.filter((a) => a.status === "completed").length;
+    const late = appointments.filter((a) => 
+      isPast(parseISO(a.scheduled_date)) && 
+      !isToday(parseISO(a.scheduled_date)) && 
+      a.status === "pending"
+    ).length;
+    const rate = appointments.length > 0 ? Math.round((completed / appointments.length) * 100) : 0;
+
+    return { total: appointments.length, today, pending, completed, late, rate };
+  }, [appointments]);
 
   if (error) {
     return (
       <DashboardLayout>
-        <Card className="card-institutional">
-          <CardContent className="flex flex-col items-center justify-center py-12">
+        <Card className="card-institutional border-none shadow-sm">
+          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
             <AlertCircle className="mb-4 h-12 w-12 text-destructive" />
-            <h3 className="mb-2 text-lg font-medium">Erro ao carregar agendamentos</h3>
-            <p className="mb-4 text-muted-foreground">
-              Não foi possível carregar a lista de agendamentos.
-            </p>
-            <Button onClick={() => refetch()}>
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Tentar novamente
+            <h3 className="text-lg font-bold uppercase tracking-wider">Erro ao carregar agendamentos</h3>
+            <Button onClick={() => refetch()} className="mt-4 shadow-institutional">
+              <RefreshCw className="mr-2 h-4 w-4" /> Tentar novamente
             </Button>
           </CardContent>
         </Card>
@@ -106,244 +114,179 @@ export default function TIAgendamentosPage() {
 
   return (
     <DashboardLayout>
-      <div className="animate-fade-in space-y-6">
-        {/* Stats */}
-        <div className="grid gap-4 md:grid-cols-4">
-          <Card className="card-institutional">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Total</p>
-                  <p className="text-2xl font-bold">{stats.total}</p>
-                </div>
-                <Calendar className="h-8 w-8 text-primary/30" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="card-institutional">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Hoje</p>
-                  <p className="text-2xl font-bold text-info">{stats.today}</p>
-                </div>
-                <Clock className="h-8 w-8 text-info/30" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="card-institutional">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Pendentes</p>
-                  <p className="text-2xl font-bold text-warning">{stats.pending}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="card-institutional">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Concluídos</p>
-                  <p className="text-2xl font-bold text-success">{stats.completed}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+      <div className="animate-fade-in space-y-8">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight">Agendamentos</h2>
+            <p className="text-muted-foreground mt-1">Controle de visitas e acesso às dependências da empresa.</p>
+          </div>
+          <Button
+            variant="outline"
+            className="h-10 px-6 font-bold shadow-sm"
+            onClick={() => {
+              downloadCSV(
+                filteredAppointments.map(a => ({
+                  visitante: a.visitor_name,
+                  documento: a.visitor_document || '',
+                  colaborador: a.user?.full_name || '',
+                  setor: a.user?.sector || '',
+                  data: a.scheduled_date,
+                  hora: a.scheduled_time?.substring(0, 5) || '',
+                  duracao: `${a.duration_minutes} min`,
+                  motivo: a.purpose || '',
+                  status: STATUS_CONFIG[a.status]?.label || a.status,
+                  entrada: formatDateForCSV(a.entry_at),
+                  saida: formatDateForCSV(a.exit_at),
+                })),
+                'agendamentos',
+                [
+                  { key: 'visitante', label: 'Visitante' }, { key: 'documento', label: 'Documento' },
+                  { key: 'colaborador', label: 'Colaborador' }, { key: 'setor', label: 'Setor' },
+                  { key: 'data', label: 'Data' }, { key: 'hora', label: 'Hora' },
+                  { key: 'motivo', label: 'Motivo' }, { key: 'status', label: 'Status' }
+                ]
+              );
+            }}
+            disabled={filteredAppointments.length === 0}
+          >
+            <Download className="mr-2 h-4 w-4" /> Exportar CSV
+          </Button>
         </div>
 
-        {/* Filters and Table */}
-        <Card className="card-institutional">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-            <CardTitle className="flex items-center gap-2">
-              <Eye className="h-5 w-5" />
-              Agendamentos
-            </CardTitle>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                downloadCSV(
-                  filteredAppointments.map(a => ({
-                    visitante: a.visitor_name,
-                    documento: a.visitor_document || '',
-                    colaborador: a.user?.full_name || '',
-                    setor: a.user?.sector || '',
-                    data: a.scheduled_date,
-                    hora: a.scheduled_time?.substring(0, 5) || '',
-                    duracao: `${a.duration_minutes} min`,
-                    motivo: a.purpose || '',
-                    status: STATUS_CONFIG[a.status]?.label || a.status,
-                    entrada: formatDateForCSV(a.entry_at),
-                    saida: formatDateForCSV(a.exit_at),
-                  })),
-                  'agendamentos',
-                  [
-                    { key: 'visitante', label: 'Visitante' },
-                    { key: 'documento', label: 'Documento' },
-                    { key: 'colaborador', label: 'Colaborador' },
-                    { key: 'setor', label: 'Setor' },
-                    { key: 'data', label: 'Data' },
-                    { key: 'hora', label: 'Hora' },
-                    { key: 'duracao', label: 'Duração' },
-                    { key: 'motivo', label: 'Motivo' },
-                    { key: 'status', label: 'Status' },
-                    { key: 'entrada', label: 'Entrada' },
-                    { key: 'saida', label: 'Saída' },
-                  ]
-                );
-              }}
-              disabled={filteredAppointments.length === 0}
-            >
-              <Download className="mr-2 h-4 w-4" />
-              Exportar CSV
-            </Button>
-          </CardHeader>
-          <CardContent>
-            {/* Filters */}
-            <div className="mb-6 flex flex-col gap-4 sm:flex-row">
+        {/* KPIs */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+          {[
+            { label: 'Hoje', value: stats.today, icon: Clock, color: 'text-blue-600', bg: 'bg-blue-50' },
+            { label: 'Pendentes', value: stats.pending, icon: Timer, color: 'text-amber-600', bg: 'bg-amber-50' },
+            { label: 'Concluídos', value: stats.completed, icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+            { label: 'Atrasados', value: stats.late, icon: AlertTriangle, color: 'text-rose-600', bg: 'bg-rose-50' },
+            { label: 'Taxa Conclusão', value: `${stats.rate}%`, icon: History, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+          ].map((kpi, idx) => (
+            <Card key={idx} className="card-institutional border-none shadow-sm">
+              <CardContent className="p-4">
+                <div className={`p-2 w-fit rounded-lg ${kpi.bg} mb-3`}>
+                  <kpi.icon className={`h-4 w-4 ${kpi.color}`} />
+                </div>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{kpi.label}</p>
+                <p className="text-xl font-bold mt-0.5">{isLoading ? '...' : kpi.value}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Filtros e Tabela */}
+        <Card className="card-institutional border-none shadow-sm">
+          <CardHeader className="px-6 pb-4">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   placeholder="Buscar por visitante, motivo ou colaborador..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9"
+                  className="pl-9 h-10"
                 />
               </div>
-              <Select value={dateFilter} onValueChange={setDateFilter}>
-                <SelectTrigger className="w-full sm:w-40">
-                  <SelectValue placeholder="Data" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas as datas</SelectItem>
-                  <SelectItem value="today">Hoje</SelectItem>
-                  <SelectItem value="tomorrow">Amanhã</SelectItem>
-                  <SelectItem value="past">Passados</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-full sm:w-40">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os status</SelectItem>
-                  <SelectItem value="pending">Pendente</SelectItem>
-                  <SelectItem value="confirmed">Confirmado</SelectItem>
-                  <SelectItem value="completed">Concluído</SelectItem>
-                  <SelectItem value="cancelled">Cancelado</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Table */}
-            {isLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <LoadingSpinner size="lg" />
+              <div className="flex gap-2">
+                <Select value={dateFilter} onValueChange={setDateFilter}>
+                  <SelectTrigger className="w-full sm:w-40 h-10"><SelectValue placeholder="Data" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas as datas</SelectItem>
+                    <SelectItem value="today">Hoje</SelectItem>
+                    <SelectItem value="tomorrow">Amanhã</SelectItem>
+                    <SelectItem value="past">Passados</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-full sm:w-40 h-10"><SelectValue placeholder="Status" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os status</SelectItem>
+                    <SelectItem value="pending">Pendente</SelectItem>
+                    <SelectItem value="confirmed">Confirmado</SelectItem>
+                    <SelectItem value="completed">Concluído</SelectItem>
+                    <SelectItem value="cancelled">Cancelado</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            {isLoading ? (
+              <div className="flex items-center justify-center py-20"><LoadingSpinner size="lg" /></div>
             ) : filteredAppointments.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <Calendar className="mb-4 h-12 w-12 text-muted-foreground/50" />
-                <h3 className="mb-2 text-lg font-medium">
-                  Nenhum agendamento encontrado
-                </h3>
-                <p className="text-muted-foreground">
-                  Ajuste os filtros para ver mais resultados.
-                </p>
+              <div className="flex flex-col items-center justify-center py-20 text-center">
+                <Calendar className="mb-4 h-12 w-12 text-muted-foreground/30" />
+                <h3 className="text-lg font-bold uppercase text-muted-foreground/50">Nenhum agendamento encontrado</h3>
               </div>
             ) : (
-              <div className="overflow-x-auto rounded-lg border">
+              <div className="overflow-x-auto">
                 <Table>
-                  <TableHeader>
+                  <TableHeader className="bg-muted/30">
                     <TableRow>
-                      <TableHead>Visitante</TableHead>
-                      <TableHead>Colaborador</TableHead>
-                      <TableHead>Data/Hora</TableHead>
-                      <TableHead>Duração</TableHead>
-                      <TableHead>Motivo</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Ações</TableHead>
+                      <TableHead className="px-6 h-12 font-bold uppercase text-[10px] tracking-widest text-muted-foreground">Visitante</TableHead>
+                      <TableHead className="h-12 font-bold uppercase text-[10px] tracking-widest text-muted-foreground">Colaborador</TableHead>
+                      <TableHead className="h-12 font-bold uppercase text-[10px] tracking-widest text-muted-foreground">Data/Hora</TableHead>
+                      <TableHead className="h-12 font-bold uppercase text-[10px] tracking-widest text-muted-foreground">Motivo</TableHead>
+                      <TableHead className="h-12 font-bold uppercase text-[10px] tracking-widest text-muted-foreground">Status</TableHead>
+                      <TableHead className="px-6 h-12 text-right font-bold uppercase text-[10px] tracking-widest text-muted-foreground">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredAppointments.map((apt) => (
-                      <TableRow key={apt.id}>
-                        <TableCell>
+                      <TableRow key={apt.id} className="hover:bg-muted/20 transition-colors group">
+                        <TableCell className="px-6 py-4">
                           <div className="flex items-center gap-3">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 font-semibold text-primary">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/5 border border-primary/10 font-bold text-primary group-hover:scale-110 transition-transform">
                               {apt.visitor_name.charAt(0).toUpperCase()}
                             </div>
-                            <div>
-                              <p className="font-medium">{apt.visitor_name}</p>
-                              {apt.visitor_document && (
-                                <p className="text-sm text-muted-foreground">
-                                  {apt.visitor_document}
-                                </p>
-                              )}
+                            <div className="min-w-0">
+                              <p className="font-bold text-sm text-foreground truncate">{apt.visitor_name}</p>
+                              {apt.visitor_document && <p className="text-[10px] text-muted-foreground uppercase font-medium">{apt.visitor_document}</p>}
                             </div>
                           </div>
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-2">
-                            <User className="h-4 w-4 text-muted-foreground" />
-                            <div>
-                              <p className="text-sm font-medium">
-                                {apt.user?.full_name || "—"}
-                              </p>
-                              {apt.user?.sector && (
-                                <p className="flex items-center gap-1 text-xs text-muted-foreground">
-                                  <Building2 className="h-3 w-3" />
-                                  {apt.user.sector}
-                                </p>
-                              )}
-                            </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-bold text-foreground truncate">{apt.user?.full_name || "—"}</p>
+                            <p className="text-[10px] text-muted-foreground uppercase font-medium truncate">{apt.user?.sector || "Sem setor"}</p>
                           </div>
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Calendar className="h-4 w-4 text-muted-foreground" />
-                            <div>
-                              <p className="text-sm">
-                                {format(new Date(apt.scheduled_date), "dd/MM/yyyy", {
-                                  locale: ptBR,
-                                })}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {apt.scheduled_time.substring(0, 5)}
-                              </p>
-                            </div>
+                          <div className="flex flex-col">
+                            <p className="text-sm font-bold text-foreground">
+                              {format(parseISO(apt.scheduled_date), "dd/MM/yyyy")}
+                            </p>
+                            <p className="text-[10px] text-muted-foreground uppercase font-bold flex items-center gap-1">
+                              <Clock className="h-3 w-3" /> {apt.scheduled_time.substring(0, 5)}
+                            </p>
                           </div>
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-1">
-                            <Clock className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-sm">
-                              {apt.duration_minutes} min
-                            </span>
-                          </div>
+                          <p className="text-xs text-muted-foreground max-w-[200px] truncate">{apt.purpose || "—"}</p>
                         </TableCell>
                         <TableCell>
-                          <span className="text-sm">
-                            {apt.purpose || "—"}
-                          </span>
+                          {(() => {
+                            const StatusIcon = STATUS_CONFIG[apt.status]?.icon;
+                            return (
+                              <Badge
+                                variant="outline"
+                                className={cn(
+                                  "text-[10px] font-bold uppercase tracking-tighter h-6 px-2 flex items-center gap-1 w-fit",
+                                  STATUS_CONFIG[apt.status]?.className
+                                )}
+                              >
+                                {StatusIcon && <StatusIcon className="h-3 w-3" />}
+                                {STATUS_CONFIG[apt.status]?.label || apt.status}
+                              </Badge>
+                            );
+                          })()}
                         </TableCell>
-                        <TableCell>
-                          <Badge
-                            variant="outline"
-                            className={cn(
-                              "text-xs",
-                              STATUS_CONFIG[apt.status]?.className
-                            )}
-                          >
-                            {STATUS_CONFIG[apt.status]?.label || apt.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="px-6 py-4 text-right">
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="text-destructive hover:text-destructive"
+                            className="h-8 w-8 text-destructive opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/10"
                             onClick={async () => {
                               if (!confirm('Deseja excluir este agendamento?')) return;
                               const { error: delErr } = await supabase.from('appointments').delete().eq('id', apt.id);
@@ -360,7 +303,6 @@ export default function TIAgendamentosPage() {
                 </Table>
               </div>
             )}
-
           </CardContent>
         </Card>
       </div>

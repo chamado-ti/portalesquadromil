@@ -360,52 +360,89 @@ export default function TIChamadosPage() {
         {isLoading ? (
           <div className="flex items-center justify-center py-12"><LoadingSpinner size="lg" /></div>
         ) : (
-          <div className="grid gap-3 lg:grid-cols-4">
-            {statuses.map(status => (
-              <div key={status.id} className="flex flex-col" onDragOver={handleDragOver} onDrop={e => handleDrop(e, status.id)}>
-                <div className="mb-2 flex items-center justify-between rounded-t-lg border-b-4 bg-card p-2.5" style={{ borderBottomColor: status.color }}>
+          <div className="grid gap-4 lg:grid-cols-4 xl:grid-cols-4">
+            {statuses
+              .filter(s => s.name.toLowerCase() !== 'aguardando')
+              .map(status => (
+              <div key={status.id} className="flex flex-col min-w-[280px]" onDragOver={handleDragOver} onDrop={e => handleDrop(e, status.id)}>
+                <div className="mb-3 flex items-center justify-between rounded-xl border-b-4 bg-card p-4 shadow-sm" style={{ borderBottomColor: status.color }}>
                   <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-semibold">{status.name}</h3>
-                    <Badge variant="secondary" className="text-xs">{ticketsByStatus[status.id]?.length || 0}</Badge>
+                    <h3 className="text-sm font-bold uppercase tracking-wider">{status.name}</h3>
+                    <Badge variant="secondary" className="text-[10px] font-bold h-5 min-w-5 rounded-full flex items-center justify-center p-0">{ticketsByStatus[status.id]?.length || 0}</Badge>
                   </div>
                 </div>
-                <ScrollArea className="h-[calc(100vh-280px)] rounded-b-lg border bg-secondary/30 p-1.5">
-                  <div className="space-y-2">
+                <ScrollArea className="h-[calc(100vh-320px)] rounded-xl border border-dashed bg-muted/30 p-2">
+                  <div className="space-y-3">
                     {!ticketsByStatus[status.id]?.length ? (
                       <div className="flex flex-col items-center justify-center py-6 text-center">
                         <TicketIcon className="mb-2 h-6 w-6 text-muted-foreground/30" />
                         <p className="text-xs text-muted-foreground">Vazio</p>
                       </div>
-                    ) : ticketsByStatus[status.id]?.map(ticket => (
-                      <Card key={ticket.id} className="cursor-pointer transition-all hover:shadow-md" draggable onDragStart={e => handleDragStart(e, ticket.id)} onClick={() => setSelectedTicketId(ticket.id)}>
-                        <CardContent className="p-2.5">
-                          <div className="mb-1.5 flex items-start justify-between gap-1">
-                            <h4 className="line-clamp-2 text-xs font-medium leading-tight">{ticket.title}</h4>
-                            <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0 text-destructive/70 hover:text-destructive" onClick={e => confirmDelete(ticket.id, e)}>
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
-                          <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-                            <div className="flex items-center gap-1"><User className="h-3 w-3" /><span className="max-w-16 truncate">{ticket.creator?.full_name?.split(" ")[0] || "—"}</span></div>
-                            <div className="flex items-center gap-1"><Calendar className="h-3 w-3" /><span>{format(new Date(ticket.created_at), "dd/MM", { locale: ptBR })}</span></div>
-                            {ticket.messages && ticket.messages.length > 0 && (
-                              <div className="flex items-center gap-1"><MessageSquare className="h-3 w-3" /><span>{ticket.messages.length}</span></div>
-                            )}
-                            {ticket.attachments && ticket.attachments.length > 0 && (
-                              <div className="flex items-center gap-1"><Image className="h-3 w-3" /><span>{ticket.attachments.length}</span></div>
-                            )}
-                          </div>
-                          {ticket.attachments && ticket.attachments.length > 0 && (
-                            <AttachmentCardThumbs urls={ticket.attachments} max={3} />
-                          )}
-                          {ticket.urgency_id && (
-                            <Badge variant="outline" className="mt-1.5 text-[10px]" style={{ borderColor: getUrgencyColor(ticket.urgency_id), color: getUrgencyColor(ticket.urgency_id) }}>
-                              {getUrgencyName(ticket.urgency_id)}
-                            </Badge>
-                          )}
-                        </CardContent>
-                      </Card>
-                    ))}
+                    ) : ticketsByStatus[status.id]?.map(ticket => {
+                      const urgency = urgencies.find(u => u.id === ticket.urgency_id);
+                      return (
+                        <Card 
+                          key={ticket.id} 
+                          className="card-institutional cursor-pointer border-none shadow-sm relative overflow-hidden group" 
+                          draggable 
+                          onDragStart={e => handleDragStart(e, ticket.id)} 
+                          onClick={() => setSelectedTicketId(ticket.id)}
+                        >
+                          {/* Priority indicator line */}
+                          <div className="absolute left-0 top-0 bottom-0 w-1" style={{ backgroundColor: urgency?.color || '#eee' }} />
+                          
+                          <CardContent className="p-3.5 space-y-3">
+                            <div className="flex items-start justify-between gap-2">
+                              <h4 className="line-clamp-2 text-xs font-bold leading-relaxed group-hover:text-primary transition-colors">
+                                {ticket.title}
+                              </h4>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100 text-destructive hover:bg-destructive/10 transition-all" 
+                                onClick={e => confirmDelete(ticket.id, e)}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+
+                            <div className="flex flex-wrap items-center gap-2">
+                              <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-medium bg-muted/50 px-2 py-0.5 rounded-full">
+                                <User className="h-3 w-3" />
+                                <span className="max-w-[80px] truncate">{ticket.creator?.full_name?.split(" ")[0] || "—"}</span>
+                              </div>
+                              <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-medium bg-muted/50 px-2 py-0.5 rounded-full">
+                                <Calendar className="h-3 w-3" />
+                                <span>{format(new Date(ticket.created_at), "dd/MM")}</span>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center justify-between pt-1">
+                              <div className="flex items-center gap-2">
+                                {ticket.messages && ticket.messages.length > 0 && (
+                                  <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-bold">
+                                    <MessageSquare className="h-3 w-3" />
+                                    <span>{ticket.messages.length}</span>
+                                  </div>
+                                )}
+                                {ticket.attachments && ticket.attachments.length > 0 && (
+                                  <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-bold">
+                                    <Image className="h-3 w-3" />
+                                    <span>{ticket.attachments.length}</span>
+                                  </div>
+                                )}
+                              </div>
+                              
+                              {urgency && (
+                                <Badge variant="outline" className="text-[9px] font-bold uppercase tracking-tighter h-5 px-1.5" style={{ borderColor: urgency.color, color: urgency.color, backgroundColor: `${urgency.color}10` }}>
+                                  {urgency.name}
+                                </Badge>
+                              )}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
                   </div>
                 </ScrollArea>
               </div>

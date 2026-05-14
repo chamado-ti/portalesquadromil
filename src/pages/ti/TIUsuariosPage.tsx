@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import { DashboardLayout } from "@/components/layouts/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,7 +16,6 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { UserFormDialog } from "@/components/ti/UserFormDialog";
@@ -30,11 +29,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  Plus, Search, MoreHorizontal, Pencil, Key, UserX, UserCheck, Trash2, Users, AlertCircle, RefreshCw, Camera, Eye,
+  Plus, Search, MoreHorizontal, Pencil, Key, UserX, UserCheck, Trash2, Users, 
+  AlertCircle, RefreshCw, Camera, Eye, UserPlus, ShieldCheck, Activity
 } from "lucide-react";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { format, subDays, isAfter, parseISO } from "date-fns";
 import type { AppRole } from "@/lib/auth";
+import { cn } from "@/lib/utils";
 
 export default function TIUsuariosPage() {
   const { user: currentUser } = useAuth();
@@ -57,7 +57,27 @@ export default function TIUsuariosPage() {
   const [credentialForm, setCredentialForm] = useState({ service_email: '', service_password: '', service_name: '' });
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
-  // Fetch credentials for selected user
+  // Stats refinadas
+  const stats = useMemo(() => {
+    const sevenDaysAgo = subDays(new Date(), 7);
+    const recent = users.filter(u => isAfter(parseISO(u.created_at), sevenDaysAgo)).length;
+    const bySector: Record<string, number> = {};
+    users.forEach(u => {
+      const s = u.sector || "Sem setor";
+      bySector[s] = (bySector[s] || 0) + 1;
+    });
+    const topSector = Object.entries(bySector).sort((a, b) => b[1] - a[1])[0];
+
+    return {
+      total: users.length,
+      active: users.filter(u => u.is_active).length,
+      inactive: users.filter(u => !u.is_active).length,
+      recent,
+      topSector: topSector ? `${topSector[0]} (${topSector[1]})` : "—"
+    };
+  }, [users]);
+
+  // Fetch credentials
   const { data: credentials = [] } = useQuery({
     queryKey: ['user-credentials', detailUser?.id],
     queryFn: async () => {
@@ -82,18 +102,6 @@ export default function TIUsuariosPage() {
     },
   });
 
-  const deleteCredentialMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from('user_credentials').delete().eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['user-credentials', detailUser?.id] });
-      toast({ title: 'Credencial removida' });
-    },
-  });
-
-  // Avatar upload
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !detailUser) return;
@@ -110,29 +118,25 @@ export default function TIUsuariosPage() {
     }
   };
 
-  const filteredUsers = users.filter(user => {
-    const matchesSearch = user.full_name.toLowerCase().includes(searchTerm.toLowerCase()) || user.email.toLowerCase().includes(searchTerm.toLowerCase()) || (user.sector?.toLowerCase() || "").includes(searchTerm.toLowerCase());
-    const matchesRole = roleFilter === "all" || user.role === roleFilter;
-    const matchesStatus = statusFilter === "all" || (statusFilter === "active" && user.is_active) || (statusFilter === "inactive" && !user.is_active);
-    return matchesSearch && matchesRole && matchesStatus;
-  });
-
-  const handleFormSubmit = async (data: CreateUserData | UpdateUserData) => {
-    if ("email" in data) await createUser(data); else await updateUser(data);
-  };
-
-  const stats = {
-    total: users.length, active: users.filter(u => u.is_active).length,
-    inactive: users.filter(u => !u.is_active).length,
-  };
+  const filteredUsers = useMemo(() => {
+    return users.filter(user => {
+      const matchesSearch = 
+        user.full_name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        user.email.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        (user.sector?.toLowerCase() || "").includes(searchTerm.toLowerCase());
+      const matchesRole = roleFilter === "all" || user.role === roleFilter;
+      const matchesStatus = statusFilter === "all" || (statusFilter === "active" && user.is_active) || (statusFilter === "inactive" && !user.is_active);
+      return matchesSearch && matchesRole && matchesStatus;
+    });
+  }, [users, searchTerm, roleFilter, statusFilter]);
 
   if (error) {
     return (
       <DashboardLayout>
-        <Card><CardContent className="flex flex-col items-center justify-center py-12">
+        <Card><CardContent className="flex flex-col items-center justify-center py-12 text-center">
           <AlertCircle className="mb-4 h-12 w-12 text-destructive" />
-          <h3 className="mb-2 text-lg font-medium">Erro ao carregar usuários</h3>
-          <Button onClick={() => refetch()}><RefreshCw className="mr-2 h-4 w-4" />Tentar novamente</Button>
+          <h3 className="mb-2 text-lg font-bold uppercase tracking-wider">Erro ao carregar usuários</h3>
+          <Button onClick={() => refetch()} className="shadow-institutional"><RefreshCw className="mr-2 h-4 w-4" />Tentar novamente</Button>
         </CardContent></Card>
       </DashboardLayout>
     );
@@ -140,86 +144,115 @@ export default function TIUsuariosPage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
-        <div className="grid gap-4 md:grid-cols-3">
-          <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">Total</p><p className="text-2xl font-bold">{stats.total}</p></CardContent></Card>
-          <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">Ativos</p><p className="text-2xl font-bold text-emerald-600">{stats.active}</p></CardContent></Card>
-          <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">Inativos</p><p className="text-2xl font-bold text-destructive">{stats.inactive}</p></CardContent></Card>
+      <div className="animate-fade-in space-y-8">
+        {/* Header Moderno */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight">Gestão de Usuários</h2>
+            <p className="text-muted-foreground mt-1">Administre acessos, perfis e credenciais da organização.</p>
+          </div>
+          <Button onClick={() => { setSelectedUser(null); setFormDialogOpen(true); }} className="h-10 px-6 font-semibold shadow-institutional">
+            <Plus className="mr-2 h-4 w-4" /> Novo Usuário
+          </Button>
         </div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-            <CardTitle className="flex items-center gap-2"><Users className="h-5 w-5" />Gestão de Usuários</CardTitle>
-            <Button onClick={() => { setSelectedUser(null); setFormDialogOpen(true); }}><Plus className="mr-2 h-4 w-4" />Novo Usuário</Button>
-          </CardHeader>
-          <CardContent>
-            <div className="mb-4 flex flex-col gap-3 sm:flex-row">
+        {/* KPIs Modernos */}
+        <div className="grid gap-4 grid-cols-2 lg:grid-cols-5">
+          {[
+            { label: 'Total', value: stats.total, icon: Users, color: 'text-blue-600', bg: 'bg-blue-50' },
+            { label: 'Ativos', value: stats.active, icon: ShieldCheck, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+            { label: 'Inativos', value: stats.inactive, icon: UserX, color: 'text-rose-600', bg: 'bg-rose-50' },
+            { label: 'Setor Líder', value: stats.topSector, icon: Activity, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+            { label: 'Recentes (7d)', value: stats.recent, icon: UserPlus, color: 'text-amber-600', bg: 'bg-amber-50' },
+          ].map((kpi, idx) => (
+            <Card key={idx} className="card-institutional border-none shadow-sm">
+              <CardContent className="p-4">
+                <div className={`p-2 w-fit rounded-lg ${kpi.bg} mb-3`}>
+                  <kpi.icon className={`h-4 w-4 ${kpi.color}`} />
+                </div>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{kpi.label}</p>
+                <p className={cn("text-xl font-bold mt-0.5 truncate", kpi.label === 'Setor Líder' && "text-sm mt-2")}>{kpi.value}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Filtros e Tabela */}
+        <Card className="card-institutional border-none shadow-sm">
+          <CardHeader className="pb-3 px-6">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input placeholder="Buscar por nome, e-mail ou setor..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-9" />
+                <Input placeholder="Buscar por nome, e-mail ou setor..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-9 h-10" />
               </div>
-              <Select value={roleFilter} onValueChange={v => setRoleFilter(v as AppRole | "all")}>
-                <SelectTrigger className="w-full sm:w-36"><SelectValue placeholder="Perfil" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="ti">TI</SelectItem>
-                  <SelectItem value="guarita">Guarita</SelectItem>
-                  <SelectItem value="colaborador">Colaborador</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={statusFilter} onValueChange={v => setStatusFilter(v as any)}>
-                <SelectTrigger className="w-full sm:w-36"><SelectValue placeholder="Status" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="active">Ativos</SelectItem>
-                  <SelectItem value="inactive">Inativos</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="flex gap-2">
+                <Select value={roleFilter} onValueChange={v => setRoleFilter(v as AppRole | "all")}>
+                  <SelectTrigger className="w-full sm:w-36 h-10"><SelectValue placeholder="Perfil" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos Perfis</SelectItem>
+                    <SelectItem value="ti">TI</SelectItem>
+                    <SelectItem value="guarita">Guarita</SelectItem>
+                    <SelectItem value="colaborador">Colaborador</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={statusFilter} onValueChange={v => setStatusFilter(v as any)}>
+                  <SelectTrigger className="w-full sm:w-36 h-10"><SelectValue placeholder="Status" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos Status</SelectItem>
+                    <SelectItem value="active">Ativos</SelectItem>
+                    <SelectItem value="inactive">Inativos</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-
+          </CardHeader>
+          <CardContent className="p-0">
             {isLoading ? (
-              <div className="flex items-center justify-center py-12"><LoadingSpinner size="lg" /></div>
+              <div className="flex items-center justify-center py-20"><LoadingSpinner size="lg" /></div>
             ) : filteredUsers.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <Users className="mb-4 h-12 w-12 text-muted-foreground/50" />
-                <h3 className="mb-2 text-lg font-medium">Nenhum usuário encontrado</h3>
+              <div className="flex flex-col items-center justify-center py-20 text-center">
+                <Users className="mb-4 h-12 w-12 text-muted-foreground/30" />
+                <h3 className="text-lg font-bold uppercase text-muted-foreground/50">Nenhum usuário encontrado</h3>
               </div>
             ) : (
-              <div className="overflow-x-auto rounded-lg border">
+              <div className="overflow-x-auto">
                 <Table>
-                  <TableHeader>
+                  <TableHeader className="bg-muted/30">
                     <TableRow>
-                      <TableHead>Usuário</TableHead>
-                      <TableHead>Setor</TableHead>
-                      <TableHead>Perfil</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Ações</TableHead>
+                      <TableHead className="px-6 h-12 font-bold uppercase text-[10px] tracking-widest text-muted-foreground">Usuário</TableHead>
+                      <TableHead className="h-12 font-bold uppercase text-[10px] tracking-widest text-muted-foreground">Setor</TableHead>
+                      <TableHead className="h-12 font-bold uppercase text-[10px] tracking-widest text-muted-foreground">Perfil</TableHead>
+                      <TableHead className="h-12 font-bold uppercase text-[10px] tracking-widest text-muted-foreground">Status</TableHead>
+                      <TableHead className="px-6 h-12 text-right font-bold uppercase text-[10px] tracking-widest text-muted-foreground">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredUsers.map(user => (
-                      <TableRow key={user.id} className="cursor-pointer" onClick={() => setDetailUser(user)}>
-                        <TableCell>
+                      <TableRow key={user.id} className="cursor-pointer hover:bg-muted/20 transition-colors group" onClick={() => setDetailUser(user)}>
+                        <TableCell className="px-6 py-4">
                           <div className="flex items-center gap-3">
-                            <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-primary/10 font-semibold text-primary">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-primary/5 border border-primary/10 font-bold text-primary shadow-sm group-hover:scale-110 transition-transform">
                               {(user as any).avatar_url ? <img src={(user as any).avatar_url} className="h-full w-full object-cover" /> : user.full_name.charAt(0).toUpperCase()}
                             </div>
-                            <div><p className="font-medium">{user.full_name}</p><p className="text-sm text-muted-foreground">{user.email}</p></div>
+                            <div className="min-w-0">
+                              <p className="font-bold text-sm text-foreground truncate">{user.full_name}</p>
+                              <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                            </div>
                           </div>
                         </TableCell>
-                        <TableCell><span className="text-sm">{user.sector || "—"}</span></TableCell>
+                        <TableCell><span className="text-xs font-semibold text-muted-foreground uppercase">{user.sector || "—"}</span></TableCell>
                         <TableCell><UserRoleBadge role={user.role} /></TableCell>
                         <TableCell><UserStatusBadge isActive={user.is_active} /></TableCell>
-                        <TableCell className="text-right" onClick={e => e.stopPropagation()}>
+                        <TableCell className="px-6 py-4 text-right" onClick={e => e.stopPropagation()}>
                           <DropdownMenu>
-                            <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => { setSelectedUser(user); setFormDialogOpen(true); }}><Pencil className="mr-2 h-4 w-4" />Editar</DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => { setSelectedUser(user); setResetDialogOpen(true); }}><Key className="mr-2 h-4 w-4" />Redefinir Senha</DropdownMenuItem>
+                            <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8 rounded-full"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48">
+                              <DropdownMenuItem onClick={() => { setSelectedUser(user); setFormDialogOpen(true); }}><Pencil className="mr-2 h-4 w-4" />Editar Perfil</DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => { setSelectedUser(user); setResetDialogOpen(true); }}><Key className="mr-2 h-4 w-4" />Trocar Senha</DropdownMenuItem>
                               <DropdownMenuItem onClick={() => toggleActiveStatus(user.id, user.is_active)}>
-                                {user.is_active ? <><UserX className="mr-2 h-4 w-4" />Desativar</> : <><UserCheck className="mr-2 h-4 w-4" />Ativar</>}
+                                {user.is_active ? <><UserX className="mr-2 h-4 w-4 text-rose-600" />Desativar</> : <><UserCheck className="mr-2 h-4 w-4 text-emerald-600" />Ativar</>}
                               </DropdownMenuItem>
-                              {user.id !== currentUser?.id && (<><DropdownMenuSeparator /><DropdownMenuItem onClick={() => { setSelectedUser(user); setDeleteDialogOpen(true); }} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Excluir</DropdownMenuItem></>)}
+                              {user.id !== currentUser?.id && (<><DropdownMenuSeparator /><DropdownMenuItem onClick={() => { setSelectedUser(user); setDeleteDialogOpen(true); }} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Excluir Usuário</DropdownMenuItem></>)}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>
@@ -233,79 +266,87 @@ export default function TIUsuariosPage() {
         </Card>
       </div>
 
-      {/* User Detail Dialog */}
+      {/* Detalhes do Usuário */}
       <Dialog open={!!detailUser} onOpenChange={() => setDetailUser(null)}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg p-0 overflow-hidden border-none shadow-2xl">
           {detailUser && (
-            <>
-              <DialogHeader><DialogTitle>Detalhes do Usuário</DialogTitle></DialogHeader>
-              <div className="space-y-4">
-                <div className="flex items-center gap-4">
-                  <div className="relative">
-                    <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-xl font-bold text-primary">
+            <div className="flex flex-col">
+              {/* Header com Cover Simulado */}
+              <div className="h-24 bg-gradient-to-r from-primary to-accent relative">
+                <div className="absolute -bottom-10 left-6">
+                  <div className="relative group">
+                    <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl bg-white border-4 border-white shadow-lg text-2xl font-bold text-primary">
                       {(detailUser as any).avatar_url ? <img src={(detailUser as any).avatar_url} className="h-full w-full object-cover" /> : detailUser.full_name.charAt(0).toUpperCase()}
                     </div>
-                    <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
-                    <Button variant="secondary" size="icon" className="absolute -bottom-1 -right-1 h-7 w-7 rounded-full" onClick={() => avatarInputRef.current?.click()}>
+                    <Button variant="secondary" size="icon" className="absolute -bottom-1 -right-1 h-7 w-7 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => avatarInputRef.current?.click()}>
                       <Camera className="h-3.5 w-3.5" />
                     </Button>
                   </div>
-                  <div>
-                    <p className="text-lg font-semibold">{detailUser.full_name}</p>
-                    <p className="text-sm text-muted-foreground">{detailUser.email}</p>
-                    <div className="mt-1 flex gap-2"><UserRoleBadge role={detailUser.role} /><UserStatusBadge isActive={detailUser.is_active} /></div>
-                  </div>
+                </div>
+              </div>
+              
+              <div className="pt-12 px-6 pb-6 space-y-6">
+                <div>
+                  <h3 className="text-xl font-bold text-foreground">{detailUser.full_name}</h3>
+                  <p className="text-sm text-muted-foreground">{detailUser.email}</p>
+                  <div className="mt-2 flex gap-2"><UserRoleBadge role={detailUser.role} /><UserStatusBadge isActive={detailUser.is_active} /></div>
                 </div>
 
-                <div className="rounded-lg border p-3">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-semibold">Senha de Acesso</h4>
-                    <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setShowPassword(s => !s)}>
-                      <Eye className="mr-1 h-3 w-3" />{showPassword ? 'Ocultar' : 'Ver'}
-                    </Button>
-                  </div>
-                  {showPassword ? (
-                    <p className="mt-1 font-mono text-sm">
-                      {(detailUser as any).tracked_password || <span className="text-muted-foreground">— sem registro. Use "Redefinir Senha" para definir uma nova.</span>}
-                    </p>
-                  ) : (
-                    <p className="mt-1 font-mono text-sm tracking-widest">••••••••</p>
-                  )}
-                </div>
-
-                <div className="rounded-lg border p-3">
-                  <h4 className="mb-2 text-sm font-semibold">Credenciais de Serviço</h4>
-                  <ScrollArea className="max-h-32">
-                    {credentials.length === 0 ? (
-                      <p className="text-xs text-muted-foreground">Nenhuma credencial cadastrada</p>
-                    ) : (
-                      <div className="space-y-2">
-                        {credentials.map((c: any) => (
-                          <div key={c.id} className="flex items-center justify-between rounded border bg-secondary/30 p-2">
-                            <div>
-                              <p className="text-xs font-medium">{c.service_name}</p>
-                              <p className="text-xs text-muted-foreground">{c.service_email} / {c.service_password}</p>
-                            </div>
-                            <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => deleteCredentialMutation.mutate(c.id)}><Trash2 className="h-3 w-3" /></Button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </ScrollArea>
-                  <div className="mt-3 grid grid-cols-3 gap-2">
-                    <Input placeholder="Serviço" value={credentialForm.service_name} onChange={e => setCredentialForm(p => ({ ...p, service_name: e.target.value }))} className="text-xs" />
-                    <Input placeholder="Email/Login" value={credentialForm.service_email} onChange={e => setCredentialForm(p => ({ ...p, service_email: e.target.value }))} className="text-xs" />
-                    <div className="flex gap-1">
-                      <Input placeholder="Senha" value={credentialForm.service_password} onChange={e => setCredentialForm(p => ({ ...p, service_password: e.target.value }))} className="text-xs" />
-                      <Button size="icon" className="h-9 w-9 shrink-0" disabled={!credentialForm.service_name || !credentialForm.service_email} onClick={() => addCredentialMutation.mutate()}>
-                        <Plus className="h-3 w-3" />
+                <div className="grid gap-4">
+                  <div className="rounded-xl border bg-muted/20 p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Senha Master</h4>
+                      <Button variant="ghost" size="sm" className="h-6 text-[10px] font-bold uppercase" onClick={() => setShowPassword(s => !s)}>
+                        <Eye className="mr-1 h-3 w-3" />{showPassword ? 'Ocultar' : 'Revelar'}
                       </Button>
+                    </div>
+                    <div className="bg-white rounded-lg p-3 border font-mono text-sm shadow-inner">
+                      {showPassword ? (
+                        (detailUser as any).tracked_password || "Sem registro"
+                      ) : (
+                        "••••••••••••"
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border bg-muted/20 p-4">
+                    <h4 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-4">Credenciais de Serviços</h4>
+                    <ScrollArea className="max-h-40 pr-3">
+                      {credentials.length === 0 ? (
+                        <p className="text-xs text-muted-foreground italic text-center py-4">Nenhuma credencial vinculada</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {credentials.map((c: any) => (
+                            <div key={c.id} className="flex items-center justify-between rounded-xl bg-white border p-3 shadow-sm group">
+                              <div className="min-w-0">
+                                <p className="text-[10px] font-bold uppercase text-primary">{c.service_name}</p>
+                                <p className="text-xs font-medium text-foreground truncate">{c.service_email}</p>
+                                <p className="text-[10px] text-muted-foreground font-mono mt-0.5">{c.service_password}</p>
+                              </div>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => deleteCredentialMutation.mutate(c.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </ScrollArea>
+                    <div className="mt-4 grid grid-cols-1 gap-2">
+                      <div className="flex gap-2">
+                        <Input placeholder="Nome do Serviço" value={credentialForm.service_name} onChange={e => setCredentialForm(p => ({ ...p, service_name: e.target.value }))} className="h-9 text-xs" />
+                        <Input placeholder="Login" value={credentialForm.service_email} onChange={e => setCredentialForm(p => ({ ...p, service_email: e.target.value }))} className="h-9 text-xs" />
+                      </div>
+                      <div className="flex gap-2">
+                        <Input placeholder="Senha" value={credentialForm.service_password} onChange={e => setCredentialForm(p => ({ ...p, service_password: e.target.value }))} className="h-9 text-xs flex-1" />
+                        <Button size="sm" className="h-9 shadow-institutional" disabled={!credentialForm.service_name || !credentialForm.service_email} onClick={() => addCredentialMutation.mutate()}>
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </>
+            </div>
           )}
+          <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
         </DialogContent>
       </Dialog>
 
