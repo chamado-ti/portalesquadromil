@@ -29,23 +29,8 @@ const TIWorkspacePage = React.lazy(() => import("./pages/ti/TIWorkspacePage"));
 const TIArquivosPage = React.lazy(() => import("./pages/ti/TIArquivosPage"));
 const TIProcessosPage = React.lazy(() => import("./pages/ti/TIProcessosPage"));
 const TIGruposPage = React.lazy(() => import("./pages/ti/TIGruposPage"));
-const TIReservaPage = React.lazy(() => import("./pages/ti/TIReservaPage"));
-
-const GuaritaDashboard = React.lazy(() => import("./pages/guarita/GuaritaDashboard"));
-const GuaritaQRCodePage = React.lazy(() => import("./pages/guarita/GuaritaQRCodePage"));
-const GuaritaHistoricoPage = React.lazy(() => import("./pages/guarita/GuaritaHistoricoPage"));
-const GuaritaAgendarPage = React.lazy(() => import("./pages/guarita/GuaritaAgendarPage"));
-const GuaritaSolicitacoesPage = React.lazy(() => import("./pages/guarita/GuaritaSolicitacoesPage"));
-const GuaritaChamadosPage = React.lazy(() => import("./pages/guarita/GuaritaChamadosPage"));
-
-const ColaboradorDashboard = React.lazy(() => import("./pages/colaborador/ColaboradorDashboard"));
-const ColaboradorAssistentePage = React.lazy(() => import("./pages/colaborador/ColaboradorAssistentePage"));
-const ColaboradorChamadosPage = React.lazy(() => import("./pages/colaborador/ColaboradorChamadosPage"));
-const ColaboradorAgendamentosPage = React.lazy(() => import("./pages/colaborador/ColaboradorAgendamentosPage"));
-const ColaboradorAgentesPage = React.lazy(() => import("./pages/colaborador/ColaboradorAgentesPage"));
-const ColaboradorGruposPage = React.lazy(() => import("./pages/colaborador/ColaboradorGruposPage"));
-const ColaboradorSolicitarPage = React.lazy(() => import("./pages/colaborador/ColaboradorSolicitarPage"));
-const ColaboradorReservaPage = React.lazy(() => import("./pages/colaborador/ColaboradorReservaPage"));
+import TIReservaPage from "./pages/ti/TIReservaPage";
+import ColaboradorReservaPage from "./pages/colaborador/ColaboradorReservaPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {

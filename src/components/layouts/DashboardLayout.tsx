@@ -114,7 +114,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
               </div>
               <div>
                 <h1 className="text-sm font-bold text-white tracking-tight leading-none mb-1">ESQUADROMIL</h1>
-                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">Enterprise</p>
+                <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-[0.2em]">v2.1.2 Online</p>
               </div>
             </Link>
           )}
