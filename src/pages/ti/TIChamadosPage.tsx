@@ -25,8 +25,9 @@ import { useToast } from "@/hooks/use-toast";
 import {
   Search, MessageSquare, User, Calendar, Clock, Send, AlertCircle, RefreshCw,
   Ticket as TicketIcon, Download, Plus, Trash2, Image, Upload, FileSpreadsheet,
+  Eye, Timer
 } from "lucide-react";
-import { format } from "date-fns";
+import { format, differenceInDays, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { AttachmentCardThumbs, AttachmentList } from "@/components/AttachmentPreview";
