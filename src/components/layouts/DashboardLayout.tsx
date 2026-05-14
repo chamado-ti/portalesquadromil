@@ -34,25 +34,25 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   // --- TI ADMIN GROUPED ---
-  { label: 'Dashboard', href: '/ti', icon: LayoutDashboard, roles: ['ti'], group: 'Principal' },
-  { label: 'Workspace', href: '/ti/workspace', icon: LayoutGrid, roles: ['ti'], group: 'Principal' },
+  { label: 'Dashboard', href: '/ti', icon: LayoutDashboard, roles: ['ti', 'admin'], group: 'Principal' },
+  { label: 'Workspace', href: '/ti/workspace', icon: LayoutGrid, roles: ['ti', 'admin'], group: 'Principal' },
   
-  { label: 'Chamados', href: '/ti/chamados', icon: Ticket, roles: ['ti'], group: 'Operações' },
-  { label: 'Agendamentos', href: '/ti/agendamentos', icon: Calendar, roles: ['ti'], group: 'Operações' },
-  { label: 'Reserva Auditório', href: '/ti/reserva-auditorio', icon: Building2, roles: ['ti'], group: 'Operações' },
-  { label: 'Solicitações', href: '/ti/solicitacoes', icon: Bell, roles: ['ti'], group: 'Operações' },
-  { label: 'Grupos', href: '/ti/grupos', icon: MessageSquare, roles: ['ti'], group: 'Operações' },
+  { label: 'Chamados', href: '/ti/chamados', icon: Ticket, roles: ['ti', 'admin'], group: 'Operações' },
+  { label: 'Agendamentos', href: '/ti/agendamentos', icon: Calendar, roles: ['ti', 'admin'], group: 'Operações' },
+  { label: 'Reserva Auditório', href: '/ti/reserva-auditorio', icon: Building2, roles: ['ti', 'admin'], group: 'Operações' },
+  { label: 'Solicitações', href: '/ti/solicitacoes', icon: Bell, roles: ['ti', 'admin'], group: 'Operações' },
+  { label: 'Grupos', href: '/ti/grupos', icon: MessageSquare, roles: ['ti', 'admin'], group: 'Operações' },
 
-  { label: 'Agentes IA', href: '/ti/agentes', icon: Cpu, roles: ['ti'], group: 'IA & Automação' },
-  { label: 'Assistente IA', href: '/ti/assistente', icon: Bot, roles: ['ti'], group: 'IA & Automação' },
-  { label: 'Processos', href: '/ti/processos', icon: GitBranch, roles: ['ti'], group: 'IA & Automação' },
+  { label: 'Agentes IA', href: '/ti/agentes', icon: Cpu, roles: ['ti', 'admin'], group: 'IA & Automação' },
+  { label: 'Assistente IA', href: '/ti/assistente', icon: Bot, roles: ['ti', 'admin'], group: 'IA & Automação' },
+  { label: 'Processos', href: '/ti/processos', icon: GitBranch, roles: ['ti', 'admin'], group: 'IA & Automação' },
 
-  { label: 'Usuários', href: '/ti/usuarios', icon: Users, roles: ['ti'], group: 'Administração' },
-  { label: 'Arquivos', href: '/ti/arquivos', icon: FolderOpen, roles: ['ti'], group: 'Administração' },
-  { label: 'Relatórios', href: '/ti/relatorios', icon: BarChart3, roles: ['ti'], group: 'Administração' },
-  { label: 'Módulos', href: '/ti/modulos', icon: Blocks, roles: ['ti'], group: 'Administração' },
-  { label: 'Logs Sistema', href: '/ti/logs', icon: FileText, roles: ['ti'], group: 'Administração' },
-  { label: 'Configurações', href: '/ti/configuracoes', icon: Settings, roles: ['ti'], group: 'Administração' },
+  { label: 'Usuários', href: '/ti/usuarios', icon: Users, roles: ['ti', 'admin'], group: 'Administração' },
+  { label: 'Arquivos', href: '/ti/arquivos', icon: FolderOpen, roles: ['ti', 'admin'], group: 'Administração' },
+  { label: 'Relatórios', href: '/ti/relatorios', icon: BarChart3, roles: ['ti', 'admin'], group: 'Administração' },
+  { label: 'Módulos', href: '/ti/modulos', icon: Blocks, roles: ['ti', 'admin'], group: 'Administração' },
+  { label: 'Logs Sistema', href: '/ti/logs', icon: FileText, roles: ['ti', 'admin'], group: 'Administração' },
+  { label: 'Configurações', href: '/ti/configuracoes', icon: Settings, roles: ['ti', 'admin'], group: 'Administração' },
 
   // --- GUARITA GROUPED ---
   { label: 'Painel Guarita', href: '/guarita', icon: LayoutDashboard, roles: ['guarita'] },
@@ -114,7 +114,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
               </div>
               <div>
                 <h1 className="text-sm font-bold text-white tracking-tight leading-none mb-1">ESQUADROMIL</h1>
-                <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-[0.2em]">v2.1.2 Online</p>
+                <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-[0.2em]">v2.1.3 Online</p>
               </div>
             </Link>
           )}
