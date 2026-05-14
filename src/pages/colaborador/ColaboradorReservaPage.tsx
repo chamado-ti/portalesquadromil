@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/dialog';
 import { 
   Calendar as CalendarIcon, Clock, Plus, Building2, 
-  CheckCircle2, XCircle, Timer, History, Info, AlertTriangle 
+  CheckCircle2, XCircle, Timer, History
 } from 'lucide-react';
 import { useReservations } from '@/hooks/useReservations';
 import { useAuth } from '@/contexts/AuthContext';
@@ -27,7 +27,7 @@ const STATUS_MAP = {
 
 export default function ColaboradorReservaPage() {
   const { user } = useAuth();
-  const { reservations, createReservation, isLoading } = useReservations(user?.id);
+  const { reservations, createReservation } = useReservations(user?.id);
   const [view, setView] = useState<'list' | 'calendar'>('calendar');
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -60,7 +60,6 @@ export default function ColaboradorReservaPage() {
     <DashboardLayout title="Reserva de Auditório">
       <div className="max-w-6xl mx-auto space-y-10">
         
-        {/* Welcome & Action Header */}
         <div className="flex flex-col md:flex-row items-center justify-between gap-6 bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-100">
           <div className="flex items-center gap-6">
             <div className="h-20 w-20 rounded-[2rem] bg-primary flex items-center justify-center text-white shadow-2xl shadow-primary/20">
@@ -92,7 +91,7 @@ export default function ColaboradorReservaPage() {
              </div>
              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
-                <Button className="h-14 px-8 rounded-2xl shadow-xl shadow-primary/20 font-bold gap-3 hover-scale">
+                <Button className="h-14 px-8 rounded-2xl shadow-xl shadow-primary/20 font-bold gap-3 hover:scale-[1.02] transition-transform">
                   <Plus className="h-5 w-5" /> Reservar
                 </Button>
               </DialogTrigger>
@@ -157,10 +156,17 @@ export default function ColaboradorReservaPage() {
                 </div>
                 <DialogFooter className="p-8 bg-slate-50 flex items-center justify-between">
                   <Button variant="ghost" onClick={() => setIsDialogOpen(false)} className="rounded-xl font-bold">Cancelar</Button>
-                  <Button onClick={handleSubmit} disabled={!form.title} className="rounded-xl px-10 h-12 shadow-xl shadow-primary/20 font-bold">Confirmar</Button>
+                  <Button 
+                    onClick={handleSubmit} 
+                    disabled={!form.title || createReservation.isPending} 
+                    className="rounded-xl px-10 h-12 shadow-xl shadow-primary/20 font-bold"
+                  >
+                    {createReservation.isPending ? <Timer className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
+                    Confirmar
+                  </Button>
                 </DialogFooter>
               </DialogContent>
-            </Dialog>
+             </Dialog>
           </div>
         </div>
 

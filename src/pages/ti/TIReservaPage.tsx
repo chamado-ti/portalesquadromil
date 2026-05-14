@@ -16,12 +16,12 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { 
   Calendar, Clock, User, CheckCircle2, XCircle, Timer, 
-  Search, MoreVertical, Trash2, Filter, Download, ArrowRight,
-  Building2, Users, AlertTriangle, ShieldCheck, History, Settings,
-  MessageSquare, Sliders, Activity, Info, Zap
+  Search, MoreVertical, Trash2, Filter, Download,
+  Building2, AlertTriangle, ShieldCheck, History, Settings,
+  Activity, Info, Zap
 } from 'lucide-react';
-import { useReservations, type AuditoriumReservation } from '@/hooks/useReservations';
-import { format, parseISO, isToday, isAfter } from 'date-fns';
+import { useReservations } from '@/hooks/useReservations';
+import { format, parseISO, isToday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 
@@ -48,7 +48,6 @@ export default function TIReservaPage() {
   }, [reservations, searchTerm]);
 
   const conflicts = useMemo(() => {
-    // Basic conflict detection (simplified for UI demonstration)
     const sorted = [...reservations].filter(r => r.status === 'confirmed').sort((a, b) => a.date.localeCompare(b.date));
     const list: any[] = [];
     for (let i = 0; i < sorted.length - 1; i++) {
@@ -63,7 +62,6 @@ export default function TIReservaPage() {
     <DashboardLayout title="Governança de Auditório">
       <div className="space-y-8 max-w-7xl mx-auto">
         
-        {/* KPI Header */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           {[
             { label: 'Ocupação Mensal', val: '78%', icon: Activity, color: 'bg-primary' },
@@ -71,7 +69,7 @@ export default function TIReservaPage() {
             { label: 'Tempo de Resposta', val: '2.4h', icon: Zap, color: 'bg-emerald-500' },
             { label: 'Logs nas 24h', val: auditLogs.length, icon: History, color: 'bg-indigo-500' },
           ].map((stat, i) => (
-            <Card key={i} className="rounded-[2.5rem] border-none shadow-xl bg-white overflow-hidden hover-scale">
+            <Card key={i} className="rounded-[2.5rem] border-none shadow-xl bg-white overflow-hidden hover:scale-[1.02] transition-transform">
               <CardContent className="p-8 flex items-center gap-6">
                 <div className={cn("h-16 w-16 rounded-3xl flex items-center justify-center text-white shadow-2xl", stat.color)}>
                   <stat.icon className="h-8 w-8" />
@@ -130,7 +128,9 @@ export default function TIReservaPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredReservations.map((res) => {
+                  {isLoading ? (
+                    <TableRow><TableCell colSpan={5} className="h-32 text-center text-slate-400 font-bold">Carregando...</TableCell></TableRow>
+                  ) : filteredReservations.map((res) => {
                     const status = STATUS_MAP[res.status];
                     return (
                       <TableRow key={res.id} className="group border-b border-slate-50 last:border-none transition-colors hover:bg-slate-50/50">
@@ -212,7 +212,7 @@ export default function TIReservaPage() {
                   <CardContent className="p-8 pt-4 space-y-6">
                     <div className="space-y-3">
                       {[c.res1, c.res2].map((res, idx) => (
-                        <div key={res.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between group">
+                        <div key={idx} className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between group">
                           <div className="flex items-center gap-3">
                             <div className="h-8 w-8 rounded-lg bg-white flex items-center justify-center text-slate-400 font-bold text-[10px] shadow-sm">
                               {res.profiles?.full_name.charAt(0)}
@@ -222,7 +222,6 @@ export default function TIReservaPage() {
                               <p className="text-[10px] text-slate-400">{res.start_time.slice(0, 5)} - {res.end_time.slice(0, 5)}</p>
                             </div>
                           </div>
-                          <Button size="sm" variant="ghost" className="rounded-lg h-8 text-[10px] font-bold uppercase opacity-0 group-hover:opacity-100 transition-opacity">Ver Usuário</Button>
                         </div>
                       ))}
                     </div>
@@ -234,7 +233,7 @@ export default function TIReservaPage() {
                 </Card>
               ))}
               {conflicts.length === 0 && (
-                <div className="col-span-full h-96 rounded-[3rem] border-2 border-dashed border-slate-100 flex flex-col items-center justify-center opacity-50">
+                <div className="col-span-full h-64 rounded-[3rem] border-2 border-dashed border-slate-100 flex flex-col items-center justify-center opacity-50">
                    <CheckCircle2 className="h-12 w-12 text-emerald-500 mb-4" />
                    <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">Nenhum conflito ativo</p>
                 </div>
@@ -245,7 +244,7 @@ export default function TIReservaPage() {
           <TabsContent value="audit" className="m-0 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <Card className="rounded-[2.5rem] border-none shadow-2xl bg-white overflow-hidden">
                <div className="p-8 border-b bg-slate-50/50 flex items-center justify-between">
-                 <h3 className="text-sm font-bold uppercase tracking-widest text-slate-500">Histórico de Alterações (System Logs)</h3>
+                 <h3 className="text-sm font-bold uppercase tracking-widest text-slate-500">Histórico de Alterações</h3>
                  <Badge variant="outline" className="rounded-full font-bold">{auditLogs.length} Entradas</Badge>
                </div>
                <ScrollArea className="h-[500px]">
@@ -326,7 +325,7 @@ export default function TIReservaPage() {
                 <div className="p-4 bg-primary/5 rounded-2xl border border-primary/10 flex gap-3">
                   <Info className="h-5 w-5 text-primary shrink-0 mt-0.5" />
                   <p className="text-[10px] text-slate-600 leading-relaxed font-medium">
-                    Horários fora desta janela serão bloqueados automaticamente para novos agendamentos no painel do colaborador.
+                    Horários fora desta janela serão bloqueados automaticamente.
                   </p>
                 </div>
               </Card>
