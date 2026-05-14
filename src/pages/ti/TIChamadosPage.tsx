@@ -361,12 +361,12 @@ export default function TIChamadosPage() {
         {isLoading ? (
           <div className="flex items-center justify-center py-12"><LoadingSpinner size="lg" /></div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 overflow-x-hidden">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 gap-4">
             {statuses
               .filter(s => s.name.toLowerCase() !== 'aguardando')
               .map(status => (
               <div key={status.id} className="flex flex-col min-w-0" onDragOver={handleDragOver} onDrop={e => handleDrop(e, status.id)}>
-                <div className="mb-3 flex items-center justify-between rounded-xl border-b-4 bg-white p-3 shadow-sm" style={{ borderBottomColor: status.color }}>
+                <div className="mb-3 flex items-center justify-between rounded-xl border-b-4 bg-white p-4 shadow-sm" style={{ borderBottomColor: status.color }}>
                   <div className="flex items-center gap-2">
                     <h3 className="text-sm font-bold uppercase tracking-wider">{status.name}</h3>
                     <Badge variant="secondary" className="text-[10px] font-bold h-5 min-w-5 rounded-full flex items-center justify-center p-0">{ticketsByStatus[status.id]?.length || 0}</Badge>
@@ -396,19 +396,19 @@ export default function TIChamadosPage() {
                             {/* Priority indicator line */}
                             <div className="absolute left-0 top-0 bottom-0 w-1.5" style={{ backgroundColor: urgency?.color || '#eee' }} />
                             
-                            <CardContent className="p-3 space-y-2">
+                            <CardContent className="p-4 space-y-3">
                               <div className="flex items-start justify-between gap-2">
                                 <div className="space-y-1">
-                                  <h4 className="line-clamp-2 text-[11px] font-bold leading-tight group-hover:text-primary transition-colors">
+                                  <h4 className="line-clamp-2 text-xs font-bold leading-relaxed group-hover:text-primary transition-colors">
                                     {ticket.title}
                                   </h4>
-                                  <div className="flex items-center gap-1.5">
-                                    <Badge variant="secondary" className="text-[8px] font-bold h-3.5 px-1 rounded uppercase">
+                                  <div className="flex items-center gap-2">
+                                    <Badge variant="secondary" className="text-[9px] font-bold h-4 px-1 rounded uppercase">
                                       #{ticket.id.substring(0, 4)}
                                     </Badge>
                                     {isOverSLA && (
-                                      <div className="flex items-center gap-1 text-[8px] font-bold text-rose-600 bg-rose-50 px-1 py-0.5 rounded border border-rose-100 animate-pulse">
-                                        <Timer className="h-2 w-2" /> SLA
+                                      <div className="flex items-center gap-1 text-[9px] font-bold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-100 animate-pulse">
+                                        <Timer className="h-2.5 w-2.5" /> FORA DO SLA
                                       </div>
                                     )}
                                   </div>
@@ -417,51 +417,51 @@ export default function TIChamadosPage() {
                                   <Button 
                                     variant="ghost" 
                                     size="icon" 
-                                    className="h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 text-muted-foreground hover:bg-muted transition-all" 
+                                    className="h-7 w-7 rounded-full opacity-0 group-hover:opacity-100 text-muted-foreground hover:bg-muted transition-all" 
                                     onClick={e => { e.stopPropagation(); setSelectedTicketId(ticket.id); }}
                                   >
-                                    <Eye className="h-3.5 w-3.5" />
+                                    <Eye className="h-4 w-4" />
                                   </Button>
                                   <Button 
                                     variant="ghost" 
                                     size="icon" 
-                                    className="h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 text-destructive hover:bg-destructive/10 transition-all" 
+                                    className="h-7 w-7 rounded-full opacity-0 group-hover:opacity-100 text-destructive hover:bg-destructive/10 transition-all" 
                                     onClick={e => confirmDelete(ticket.id, e)}
                                   >
-                                    <Trash2 className="h-3.5 w-3.5" />
+                                    <Trash2 className="h-4 w-4" />
                                   </Button>
                                 </div>
                               </div>
 
                               <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-1.5">
-                                  <div className="flex h-6 w-6 items-center justify-center rounded bg-primary/5 border border-primary/10 text-[9px] font-bold text-primary shadow-sm">
+                                <div className="flex items-center gap-2">
+                                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/5 border border-primary/10 text-[10px] font-bold text-primary shadow-sm">
                                     {ticket.creator?.full_name?.charAt(0).toUpperCase() || "U"}
                                   </div>
                                   <div className="min-w-0">
-                                    <p className="text-[9px] font-bold text-foreground truncate max-w-[60px]">{ticket.creator?.full_name?.split(" ")[0] || "—"}</p>
-                                    <p className="text-[8px] text-muted-foreground uppercase font-medium truncate max-w-[60px]">{ticket.creator?.sector || "S/S"}</p>
+                                    <p className="text-[10px] font-bold text-foreground truncate">{ticket.creator?.full_name?.split(" ")[0] || "—"}</p>
+                                    <p className="text-[9px] text-muted-foreground uppercase font-medium truncate">{ticket.creator?.sector || "S/S"}</p>
                                   </div>
                                 </div>
                                 <div className="text-right">
-                                  <p className="text-[9px] font-bold text-muted-foreground">
-                                    {daysOpen === 0 ? "Hoje" : `${daysOpen}d`}
+                                  <p className="text-[10px] font-bold text-muted-foreground">
+                                    {daysOpen === 0 ? "Hoje" : `${daysOpen}d atrás`}
                                   </p>
-                                  <div className="flex items-center justify-end gap-1 mt-0.5">
-                                    <Calendar className="h-2.5 w-2.5 text-muted-foreground/50" />
-                                    <span className="text-[8px] text-muted-foreground font-medium">{format(parseISO(ticket.created_at), "dd/MM")}</span>
+                                  <div className="flex items-center justify-end gap-1.5 mt-0.5">
+                                    <Calendar className="h-3 w-3 text-muted-foreground/50" />
+                                    <span className="text-[9px] text-muted-foreground font-medium">{format(parseISO(ticket.created_at), "dd/MM")}</span>
                                   </div>
                                 </div>
                               </div>
 
                               <div className="flex items-center justify-between pt-1 border-t border-dashed">
-                                <div className="flex items-center gap-2">
-                                  <div className="flex items-center gap-1 text-[9px] text-muted-foreground font-bold">
-                                    <MessageSquare className="h-2.5 w-2.5" />
+                                <div className="flex items-center gap-3">
+                                  <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-bold" title="Mensagens">
+                                    <MessageSquare className="h-3 w-3" />
                                     <span>{ticket.messages?.length || 0}</span>
                                   </div>
-                                  <div className="flex items-center gap-1 text-[9px] text-muted-foreground font-bold">
-                                    <Image className="h-2.5 w-2.5" />
+                                  <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-bold" title="Anexos">
+                                    <Image className="h-3 w-3" />
                                     <span>{ticket.attachments?.length || 0}</span>
                                   </div>
                                 </div>
@@ -469,7 +469,7 @@ export default function TIChamadosPage() {
                                 {urgency && (
                                   <Badge 
                                     variant="outline" 
-                                    className="text-[8px] font-bold uppercase tracking-tighter h-4 px-1.5 rounded-full" 
+                                    className="text-[9px] font-bold uppercase tracking-tighter h-5 px-2 rounded-full" 
                                     style={{ borderColor: urgency.color, color: urgency.color, backgroundColor: `${urgency.color}10` }}
                                   >
                                     {urgency.name}
