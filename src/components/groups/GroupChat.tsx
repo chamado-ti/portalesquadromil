@@ -9,7 +9,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import {
   Send, MessageSquare, Pin, Pencil, Trash2, Hash, ChevronLeft, Loader2,
   Paperclip, Reply, Smile, X, Settings, CornerUpLeft, User, Image as ImageIcon,
-  MoreVertical, Share2, Info
+  MoreVertical, Share2, Info, Tag, Search
 } from 'lucide-react';
 import { useGroupMessages, useGroupTags, uploadGroupAttachment, markGroupRead, type Group, type GroupMessage } from '@/hooks/useGroups';
 import { useAuth } from '@/contexts/AuthContext';
