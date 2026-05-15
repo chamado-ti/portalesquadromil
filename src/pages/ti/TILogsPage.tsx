@@ -315,18 +315,19 @@ export default function TILogsPage() {
   
 function StatCard({ title, value, icon: Icon, color, bg }: any) {  
   return (  
-    <Card className=\" card-institutional border-none shadow-sm group hover:shadow-md transition-all "duration-300\>  
-      <CardContent className=\p-4\>  
-        <div className=\flex" items-center justify-between "mb-2\>  
-          <div className={cn(\p-2" rounded-xl "transition-colors\, bg)}>  
-            <Icon className={cn(\h-4" "w-4\, color)} />  
+    <Card className="card-institutional border-none shadow-sm group hover:shadow-md transition-all duration-300">  
+      <CardContent className="p-4">  
+        <div className="flex items-center justify-between mb-2">  
+          <div className={cn("p-2 rounded-xl transition-colors", bg)}>  
+            <Icon className={cn("h-4 w-4", color)} />  
           </div>  
-          <ArrowRight className=\h-4" w-4 text-muted-foreground/10 opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 "transition-all\ />  
+          <ArrowRight className="h-4 w-4 text-muted-foreground/10 opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all" />  
         </div>  
-        <div className=\space-y-0.5\>  
-          <p className=\text-[10px]" font-bold uppercase tracking-wider "text-muted-foreground\>{title}</p>  
-          <h3 className=\text-xl" font-bold text-foreground "truncate\>{value}</h3>  
+        <div className="space-y-0.5">  
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{title}</p>  
+          <h3 className="text-xl font-bold text-foreground truncate">{value}</h3>  
         </div>  
       </CardContent>  
     </Card>  
   );  
+}

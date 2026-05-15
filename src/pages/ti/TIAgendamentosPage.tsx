@@ -164,15 +164,10 @@ export default function TIAgendamentosPage() {
                   <kpi.icon className={`h-4 w-4 ${kpi.color}`} />
                 </div>
                 <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{kpi.label}</p>
-    <DashboardLayout title="Controle de Agendamentos">
-      <div className="space-y-8 animate-fade-in">
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          <StatCard title="Para Hoje" value={stats.today} icon={Calendar} color="text-blue-600" bg="bg-blue-50" />
-          <StatCard title="Atrasados" value={stats.late} icon={AlertTriangle} color="text-rose-600" bg="bg-rose-50" />
-          <StatCard title="Pendentes" value={stats.pending} icon={Timer} color="text-amber-600" bg="bg-amber-50" />
-          <StatCard title="Concluídos" value={stats.completed} icon={CheckCircle2} color="text-emerald-600" bg="bg-emerald-50" />
-          <StatCard title="Próximos" value={stats.next} icon={Clock} color="text-indigo-600" bg="bg-indigo-50" />
-          <StatCard title="Taxa Conclusão" value={`${stats.rate}%`} icon={Activity} color="text-purple-600" bg="bg-purple-50" />
+                <h4 className="text-2xl font-black mt-1 text-foreground">{kpi.value}</h4>
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
         <Card className="card-institutional border-none shadow-sm overflow-hidden">
@@ -190,10 +185,6 @@ export default function TIAgendamentosPage() {
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
-              </div>
-                    <SelectItem value="cancelled">Cancelado</SelectItem>
-                  </SelectContent>
-                </Select>
               </div>
             </div>
           </CardHeader>
@@ -298,19 +289,19 @@ export default function TIAgendamentosPage() {
   
 function StatCard({ title, value, icon: Icon, color, bg }: any) {  
   return (  
-    <Card className=\" card-institutional border-none shadow-sm group hover:shadow-md transition-all "duration-300\>  
-      <CardContent className=\p-4\>  
-        <div className=\flex" items-center justify-between "mb-2\>  
-          <div className={cn(\p-2" rounded-xl "transition-colors\, bg)}>  
-            <Icon className={cn(\h-4" "w-4\, color)} />  
+    <Card className="card-institutional border-none shadow-sm group hover:shadow-md transition-all duration-300">  
+      <CardContent className="p-4">  
+        <div className="flex items-center justify-between mb-2">  
+          <div className={cn("p-2 rounded-xl transition-colors", bg)}>  
+            <Icon className={cn("h-4 w-4", color)} />  
           </div>  
-          <ArrowRight className=\h-4" w-4 text-muted-foreground/10 opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 "transition-all\ />  
+          <ArrowRight className="h-4 w-4 text-muted-foreground/10 opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all" />  
         </div>  
-        <div className=\space-y-0.5\>  
-          <p className=\text-[10px]" font-bold uppercase tracking-wider "text-muted-foreground\>{title}</p>  
-          <h3 className=\text-xl" font-bold text-foreground "truncate\>{value}</h3>  
+        <div className="space-y-0.5">  
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{title}</p>  
+          <h3 className="text-xl font-bold text-foreground truncate">{value}</h3>  
         </div>  
       </CardContent>  
     </Card>  
   );  
-}  
+}
