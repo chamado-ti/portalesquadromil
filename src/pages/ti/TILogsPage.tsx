@@ -44,7 +44,6 @@ import {
   ArrowRight
 } from "lucide-react";
 import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 
 const ACTION_CONFIG: Record<string, { label: string; color: string }> = {
@@ -67,15 +66,12 @@ export default function TILogsPage() {
   const [actionFilter, setActionFilter] = useState<string>("all");
   const [entityFilter, setEntityFilter] = useState<string>("all");
 
-  // Get unique entity types
   const entityTypes = Array.from(
     new Set(logs.map((log) => log.entity_type).filter(Boolean))
   );
 
-  // Get unique actions
   const actions = Array.from(new Set(logs.map((log) => log.action)));
 
-  // Filter logs
   const filteredLogs = logs.filter((log) => {
     const matchesSearch =
       log.action.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -94,17 +90,14 @@ export default function TILogsPage() {
 
   if (error) {
     return (
-      <DashboardLayout>
+      <DashboardLayout title="Erro Auditoria">
         <Card className="card-institutional">
           <CardContent className="flex flex-col items-center justify-center py-12">
             <AlertCircle className="mb-4 h-12 w-12 text-destructive" />
             <h3 className="mb-2 text-lg font-medium">Erro ao carregar logs</h3>
-            <p className="mb-4 text-muted-foreground">
-              Não foi possível carregar os logs de auditoria.
-            </p>
+            <p className="mb-4 text-muted-foreground">Não foi possível carregar os logs de auditoria.</p>
             <Button onClick={() => refetch()}>
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Tentar novamente
+              <RefreshCw className="mr-2 h-4 w-4" /> Tentar novamente
             </Button>
           </CardContent>
         </Card>
@@ -130,51 +123,16 @@ export default function TILogsPage() {
         </div>
 
         <Card className="card-institutional border-none shadow-sm overflow-hidden">
-          <CardHeader className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 px-6">
-            <div className="space-y-1">
-              <CardTitle className="text-xl font-bold">Histórico de Operações</CardTitle>
-              <p className="text-xs text-muted-foreground">Rastreabilidade total de todas as ações realizadas no portal esquadromil.</p>
-            </div>
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar ação, usuário ou detalhe..."
-                  className="pl-9 w-[280px] h-10 bg-muted/30 border-none rounded-xl text-sm"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-              <Select value={actionFilter} onValueChange={setActionFilter}>
-                <SelectTrigger className="w-[160px] h-10 bg-muted/30 border-none rounded-xl text-sm">
-                  <SelectValue placeholder="Tipo de Ação" />
-                </SelectTrigger>
-                <SelectContent className="rounded-xl">
-                  <SelectItem value="all">Todas Ações</SelectItem>
-                  {actions.map((action) => (
-                    <SelectItem key={action} value={action}>
-                      {ACTION_CONFIG[action]?.label || action}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </CardHeader>
-
-        {/* Filters and Table */}
-        <Card className="card-institutional">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
             <CardTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
+              <FileText className="h-5 w-5 text-primary" />
               Logs de Auditoria
             </CardTitle>
-            <Badge variant="outline" className="gap-1">
-              <Shield className="h-3 w-3" />
-              Somente Leitura
+            <Badge variant="outline" className="gap-1 rounded-lg">
+              <Shield className="h-3 w-3" /> Somente Leitura
             </Badge>
           </CardHeader>
-          <CardContent>
-            {/* Filters */}
+          <CardContent className="px-6 pb-6">
             <div className="mb-6 flex flex-col gap-4 sm:flex-row">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -182,11 +140,11 @@ export default function TILogsPage() {
                   placeholder="Buscar nos logs..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9"
+                  className="pl-9 h-10 bg-muted/30 border-none rounded-xl"
                 />
               </div>
               <Select value={actionFilter} onValueChange={setActionFilter}>
-                <SelectTrigger className="w-full sm:w-48">
+                <SelectTrigger className="w-full sm:w-48 h-10 bg-muted/30 border-none rounded-xl">
                   <SelectValue placeholder="Ação" />
                 </SelectTrigger>
                 <SelectContent>
@@ -199,32 +157,24 @@ export default function TILogsPage() {
                 </SelectContent>
               </Select>
               <Select value={entityFilter} onValueChange={setEntityFilter}>
-                <SelectTrigger className="w-full sm:w-40">
+                <SelectTrigger className="w-full sm:w-40 h-10 bg-muted/30 border-none rounded-xl">
                   <SelectValue placeholder="Entidade" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas as entidades</SelectItem>
                   {entityTypes.map((type) => (
-                    <SelectItem key={type} value={type!}>
-                      {type}
-                    </SelectItem>
+                    <SelectItem key={type} value={type!}>{type}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
 
-            {/* Table */}
             {isLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <LoadingSpinner size="lg" />
-              </div>
+              <div className="flex items-center justify-center py-12"><LoadingSpinner size="lg" /></div>
             ) : filteredLogs.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center">
-                <FileText className="mb-4 h-12 w-12 text-muted-foreground/50" />
+                <FileText className="mb-4 h-12 w-12 text-muted-foreground/30" />
                 <h3 className="mb-2 text-lg font-medium">Nenhum log encontrado</h3>
-                <p className="text-muted-foreground">
-                  Ajuste os filtros para ver mais resultados.
-                </p>
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -235,12 +185,12 @@ export default function TILogsPage() {
                       <TableHead className="font-bold text-[10px] uppercase tracking-widest text-muted-foreground">Usuário</TableHead>
                       <TableHead className="font-bold text-[10px] uppercase tracking-widest text-muted-foreground">Ação</TableHead>
                       <TableHead className="font-bold text-[10px] uppercase tracking-widest text-muted-foreground">Módulo</TableHead>
-                      <TableHead className="font-bold text-[10px] uppercase tracking-widest text-muted-foreground pr-6">Detalhes do Evento</TableHead>
+                      <TableHead className="font-bold text-[10px] uppercase tracking-widest text-muted-foreground pr-6 text-right">Detalhes</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredLogs.map((log) => (
-                      <TableRow key={log.id} className="group hover:bg-muted/10 transition-colors border-b">
+                      <TableRow key={log.id} className="group hover:bg-muted/10 transition-colors border-b last:border-none">
                         <TableCell className="pl-6 py-4">
                           <div className="flex flex-col">
                             <span className="font-bold text-sm text-foreground">{format(new Date(log.created_at), "dd/MM/yyyy")}</span>
@@ -267,15 +217,15 @@ export default function TILogsPage() {
                             {log.entity_type || "Geral"}
                           </span>
                         </TableCell>
-                        <TableCell className="pr-6">
+                        <TableCell className="pr-6 text-right">
                           {log.details ? (
                             <Dialog>
                               <DialogTrigger asChild>
-                                <Button variant="ghost" size="sm" className="h-7 px-2 text-[10px] font-bold uppercase tracking-tighter hover:bg-primary/5 hover:text-primary">
-                                  <Eye className="mr-1.5 h-3 w-3" /> Ver JSON
+                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-lg hover:bg-primary/5 hover:text-primary">
+                                  <Eye className="h-4 w-4" />
                                 </Button>
                               </DialogTrigger>
-                              <DialogContent className="max-w-2xl bg-[#1e1e1e] border-none text-white p-0 overflow-hidden rounded-2xl">
+                              <DialogContent className="max-w-2xl bg-[#1e1e1e] border-none text-white p-0 overflow-hidden rounded-2xl shadow-2xl">
                                 <div className="p-4 border-b border-white/5 bg-white/5 flex items-center justify-between">
                                   <h3 className="text-sm font-bold uppercase tracking-wider text-primary-foreground/70">Payload do Evento</h3>
                                   <Badge variant="outline" className="text-[10px] border-white/20 text-white/50">{log.action}</Badge>
@@ -288,7 +238,7 @@ export default function TILogsPage() {
                               </DialogContent>
                             </Dialog>
                           ) : (
-                            <span className="text-xs text-muted-foreground/50">—</span>
+                            <span className="text-xs text-muted-foreground/30">—</span>
                           )}
                         </TableCell>
                       </TableRow>
@@ -298,13 +248,9 @@ export default function TILogsPage() {
               </div>
             )}
 
-            {/* Info note */}
-            <div className="mt-4 flex items-center gap-2 rounded-lg border border-warning/30 bg-warning/5 p-3 text-sm text-warning">
+            <div className="mt-6 flex items-center gap-2 rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 text-xs text-amber-600 font-medium">
               <Shield className="h-4 w-4 shrink-0" />
-              <p>
-                Logs de auditoria são imutáveis e não podem ser editados ou excluídos.
-                Todas as ações críticas do sistema são registradas automaticamente.
-              </p>
+              <p>Logs de auditoria são imutáveis e protegidos contra alteração ou exclusão.</p>
             </div>
           </CardContent>
         </Card>
@@ -312,7 +258,7 @@ export default function TILogsPage() {
     </DashboardLayout>
   );
 }
-  
+
 function StatCard({ title, value, icon: Icon, color, bg }: any) {  
   return (  
     <Card className="card-institutional border-none shadow-sm group hover:shadow-md transition-all duration-300">  

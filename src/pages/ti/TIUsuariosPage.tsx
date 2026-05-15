@@ -30,7 +30,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Plus, Search, MoreHorizontal, Pencil, Key, UserX, UserCheck, Trash2, Users, 
-  AlertCircle, RefreshCw, Camera, Eye, UserPlus, ShieldCheck, Activity
+  AlertCircle, RefreshCw, Camera, Eye, UserPlus, ShieldCheck, Activity, ArrowRight
 } from "lucide-react";
 import { format, subDays, isAfter, parseISO } from "date-fns";
 import type { AppRole } from "@/lib/auth";
@@ -103,6 +103,17 @@ export default function TIUsuariosPage() {
     },
   });
 
+  const deleteCredentialMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('user_credentials').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user-credentials', detailUser?.id] });
+      toast({ title: 'Credencial removida' });
+    },
+  });
+
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !detailUser) return;
@@ -117,6 +128,15 @@ export default function TIUsuariosPage() {
     } catch (err: any) {
       toast({ title: 'Erro', description: err.message, variant: 'destructive' });
     }
+  };
+
+  const handleFormSubmit = async (data: any) => {
+    if (selectedUser) {
+      await updateUser({ user_id: selectedUser.id, ...data });
+    } else {
+      await createUser(data);
+    }
+    setFormDialogOpen(false);
   };
 
   const filteredUsers = useMemo(() => {
@@ -180,6 +200,7 @@ export default function TIUsuariosPage() {
                   <SelectItem value="ti">TI (Admin)</SelectItem>
                   <SelectItem value="colaborador">Colaborador</SelectItem>
                   <SelectItem value="guarita">Guarita</SelectItem>
+                  <SelectItem value="admin">Administrador</SelectItem>
                 </SelectContent>
               </Select>
               <Button className="h-10 px-5 rounded-xl shadow-lg shadow-primary/20" onClick={() => { setSelectedUser(null); setFormDialogOpen(true); }}>

@@ -1,7 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
 
-export type AppRole = 'ti' | 'guarita' | 'colaborador';
+export type AppRole = 'ti' | 'guarita' | 'colaborador' | 'admin';
 
 export interface UserProfile {
   id: string;
@@ -87,6 +87,7 @@ export function translateAuthError(message: string): string {
 export function getRoleLabel(role: AppRole): string {
   const labels: Record<AppRole, string> = {
     ti: 'TI',
+    admin: 'Administrador',
     guarita: 'Guarita',
     colaborador: 'Colaborador',
   };
@@ -96,6 +97,7 @@ export function getRoleLabel(role: AppRole): string {
 export function getRoleColor(role: AppRole): string {
   const colors: Record<AppRole, string> = {
     ti: 'bg-primary text-primary-foreground',
+    admin: 'bg-indigo-600 text-white',
     guarita: 'bg-warning text-warning-foreground',
     colaborador: 'bg-info text-info-foreground',
   };

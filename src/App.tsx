@@ -60,24 +60,24 @@ const App = () => (
                 <Route path="/" element={<Landing />} />
                 <Route path="/login" element={<Landing />} />
 
-                <Route path="/ti" element={<ProtectedRoute allowedRoles={['ti']}><TIDashboard /></ProtectedRoute>} />
-                <Route path="/ti/usuarios" element={<ProtectedRoute allowedRoles={['ti']}><TIUsuariosPage /></ProtectedRoute>} />
-                <Route path="/ti/chamados" element={<ProtectedRoute allowedRoles={['ti']}><TIChamadosPage /></ProtectedRoute>} />
-                <Route path="/ti/agendamentos" element={<ProtectedRoute allowedRoles={['ti']}><TIAgendamentosPage /></ProtectedRoute>} />
-                <Route path="/ti/logs" element={<ProtectedRoute allowedRoles={['ti']}><TILogsPage /></ProtectedRoute>} />
-                <Route path="/ti/configuracoes" element={<ProtectedRoute allowedRoles={['ti']}><TIConfiguracoesPage /></ProtectedRoute>} />
-                <Route path="/ti/relatorios" element={<ProtectedRoute allowedRoles={['ti']}><TIRelatoriosPage /></ProtectedRoute>} />
-                <Route path="/ti/assistente" element={<ProtectedRoute allowedRoles={['ti']}><TIAssistentePage /></ProtectedRoute>} />
-                <Route path="/ti/agentes" element={<ProtectedRoute allowedRoles={['ti']}><TIAgentesPage /></ProtectedRoute>} />
-                <Route path="/ti/modulos" element={<ProtectedRoute allowedRoles={['ti']}><TIModulosPage /></ProtectedRoute>} />
-                <Route path="/ti/workspace" element={<ProtectedRoute allowedRoles={['ti']}><TIWorkspacePage /></ProtectedRoute>} />
-                <Route path="/ti/tarefas" element={<ProtectedRoute allowedRoles={['ti']}><TIWorkspacePage /></ProtectedRoute>} />
-                <Route path="/ti/kanban" element={<ProtectedRoute allowedRoles={['ti']}><TIWorkspacePage /></ProtectedRoute>} />
-                <Route path="/ti/arquivos" element={<ProtectedRoute allowedRoles={['ti']}><TIArquivosPage /></ProtectedRoute>} />
-                <Route path="/ti/processos" element={<ProtectedRoute allowedRoles={['ti']}><TIProcessosPage /></ProtectedRoute>} />
-                <Route path="/ti/grupos" element={<ProtectedRoute allowedRoles={['ti']}><TIGruposPage /></ProtectedRoute>} />
-                <Route path="/ti/reserva-auditorio" element={<ProtectedRoute allowedRoles={['ti']}><TIReservaPage /></ProtectedRoute>} />
-                <Route path="/ti/solicitacoes" element={<ProtectedRoute allowedRoles={['ti']}><GuaritaSolicitacoesPage /></ProtectedRoute>} />
+                <Route path="/ti" element={<ProtectedRoute allowedRoles={['ti', 'admin']}><TIDashboard /></ProtectedRoute>} />
+                <Route path="/ti/usuarios" element={<ProtectedRoute allowedRoles={['ti', 'admin']}><TIUsuariosPage /></ProtectedRoute>} />
+                <Route path="/ti/chamados" element={<ProtectedRoute allowedRoles={['ti', 'admin']}><TIChamadosPage /></ProtectedRoute>} />
+                <Route path="/ti/agendamentos" element={<ProtectedRoute allowedRoles={['ti', 'admin']}><TIAgendamentosPage /></ProtectedRoute>} />
+                <Route path="/ti/logs" element={<ProtectedRoute allowedRoles={['ti', 'admin']}><TILogsPage /></ProtectedRoute>} />
+                <Route path="/ti/configuracoes" element={<ProtectedRoute allowedRoles={['ti', 'admin']}><TIConfiguracoesPage /></ProtectedRoute>} />
+                <Route path="/ti/relatorios" element={<ProtectedRoute allowedRoles={['ti', 'admin']}><TIRelatoriosPage /></ProtectedRoute>} />
+                <Route path="/ti/assistente" element={<ProtectedRoute allowedRoles={['ti', 'admin']}><TIAssistentePage /></ProtectedRoute>} />
+                <Route path="/ti/agentes" element={<ProtectedRoute allowedRoles={['ti', 'admin']}><TIAgentesPage /></ProtectedRoute>} />
+                <Route path="/ti/modulos" element={<ProtectedRoute allowedRoles={['ti', 'admin']}><TIModulosPage /></ProtectedRoute>} />
+                <Route path="/ti/workspace" element={<ProtectedRoute allowedRoles={['ti', 'admin']}><TIWorkspacePage /></ProtectedRoute>} />
+                <Route path="/ti/tarefas" element={<ProtectedRoute allowedRoles={['ti', 'admin']}><TIWorkspacePage /></ProtectedRoute>} />
+                <Route path="/ti/kanban" element={<ProtectedRoute allowedRoles={['ti', 'admin']}><TIWorkspacePage /></ProtectedRoute>} />
+                <Route path="/ti/arquivos" element={<ProtectedRoute allowedRoles={['ti', 'admin']}><TIArquivosPage /></ProtectedRoute>} />
+                <Route path="/ti/processos" element={<ProtectedRoute allowedRoles={['ti', 'admin']}><TIProcessosPage /></ProtectedRoute>} />
+                <Route path="/ti/grupos" element={<ProtectedRoute allowedRoles={['ti', 'admin']}><TIGruposPage /></ProtectedRoute>} />
+                <Route path="/ti/reserva-auditorio" element={<ProtectedRoute allowedRoles={['ti', 'admin']}><TIReservaPage /></ProtectedRoute>} />
+                <Route path="/ti/solicitacoes" element={<ProtectedRoute allowedRoles={['ti', 'admin']}><GuaritaSolicitacoesPage /></ProtectedRoute>} />
 
                 <Route path="/guarita" element={<ProtectedRoute allowedRoles={['guarita']}><GuaritaDashboard /></ProtectedRoute>} />
                 <Route path="/guarita/agendar" element={<ProtectedRoute allowedRoles={['guarita']}><GuaritaAgendarPage /></ProtectedRoute>} />
