@@ -31,6 +31,7 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
     // Redirect to their appropriate dashboard
     switch (role) {
       case 'ti':
+      case 'admin':
         return <Navigate to="/ti" replace />;
       case 'guarita':
         return <Navigate to="/guarita" replace />;

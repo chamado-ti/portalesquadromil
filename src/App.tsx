@@ -29,8 +29,25 @@ const TIWorkspacePage = React.lazy(() => import("./pages/ti/TIWorkspacePage"));
 const TIArquivosPage = React.lazy(() => import("./pages/ti/TIArquivosPage"));
 const TIProcessosPage = React.lazy(() => import("./pages/ti/TIProcessosPage"));
 const TIGruposPage = React.lazy(() => import("./pages/ti/TIGruposPage"));
-import TIReservaPage from "./pages/ti/TIReservaPage";
-import ColaboradorReservaPage from "./pages/colaborador/ColaboradorReservaPage";
+const TIReservaPage = React.lazy(() => import("./pages/ti/TIReservaPage"));
+
+// Lazy load Guarita pages
+const GuaritaDashboard = React.lazy(() => import("./pages/guarita/GuaritaDashboard"));
+const GuaritaAgendarPage = React.lazy(() => import("./pages/guarita/GuaritaAgendarPage"));
+const GuaritaSolicitacoesPage = React.lazy(() => import("./pages/guarita/GuaritaSolicitacoesPage"));
+const GuaritaQRCodePage = React.lazy(() => import("./pages/guarita/GuaritaQRCodePage"));
+const GuaritaChamadosPage = React.lazy(() => import("./pages/guarita/GuaritaChamadosPage"));
+const GuaritaHistoricoPage = React.lazy(() => import("./pages/guarita/GuaritaHistoricoPage"));
+
+// Lazy load Colaborador pages
+const ColaboradorDashboard = React.lazy(() => import("./pages/colaborador/ColaboradorDashboard"));
+const ColaboradorAssistentePage = React.lazy(() => import("./pages/colaborador/ColaboradorAssistentePage"));
+const ColaboradorChamadosPage = React.lazy(() => import("./pages/colaborador/ColaboradorChamadosPage"));
+const ColaboradorAgendamentosPage = React.lazy(() => import("./pages/colaborador/ColaboradorAgendamentosPage"));
+const ColaboradorAgentesPage = React.lazy(() => import("./pages/colaborador/ColaboradorAgentesPage"));
+const ColaboradorGruposPage = React.lazy(() => import("./pages/colaborador/ColaboradorGruposPage"));
+const ColaboradorReservaPage = React.lazy(() => import("./pages/colaborador/ColaboradorReservaPage"));
+const ColaboradorSolicitarPage = React.lazy(() => import("./pages/colaborador/ColaboradorSolicitarPage"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
